@@ -1,0 +1,391 @@
+package com.example.nexusnote.ui.screens.lists
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.nexusnote.viewmodel.ListsUiState
+import com.example.nexusnote.viewmodel.ShoppingListUi
+
+/** Composable sin ViewModel: solo recibe estado inmutable y eventos. */
+@Composable
+fun ListsScreen(
+    uiState: ListsUiState,
+    onOpenList: (Int) -> Unit,
+    onDeleteList: (Int) -> Unit,
+    onCreateClick: () -> Unit,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val currentLists = (uiState as? ListsUiState.Success)?.lists.orEmpty()
+    var pendingDeleteId by rememberSaveable { mutableStateOf<Int?>(null) }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            ListsHeader(lists = currentLists)
+
+            when (val state = uiState) {
+                ListsUiState.Loading -> LoadingContent(Modifier.weight(1f))
+                is ListsUiState.Error -> ErrorContent(
+                    message = state.message,
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier.weight(1f)
+                )
+                is ListsUiState.Success -> {
+                    if (state.lists.isEmpty()) {
+                        EmptyContent(Modifier.weight(1f))
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = 14.dp,
+                                end = 16.dp,
+                                bottom = 12.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(state.lists, key = { it.id }) { list ->
+                                ShoppingListCard(
+                                    list = list,
+                                    onOpenClick = { onOpenList(list.id) },
+                                    onDeleteClick = { pendingDeleteId = list.id }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button(
+                onClick = onCreateClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)
+                    .height(50.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("＋   Nueva lista", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+
+    val listToDelete = currentLists.firstOrNull { it.id == pendingDeleteId }
+    if (listToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDeleteId = null },
+            title = { Text("Eliminar lista") },
+            text = { Text("¿Quieres eliminar la lista ‘${listToDelete.name}’?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteList(listToDelete.id)
+                    pendingDeleteId = null
+                }) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteId = null }) { Text("Cancelar") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ListsHeader(lists: List<ShoppingListUi>) {
+    val productCount = lists.sumOf { it.productCount.coerceAtLeast(0) }
+    val purchasedCount = lists.sumOf {
+        it.purchasedCount.coerceIn(0, it.productCount.coerceAtLeast(0))
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 18.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "BIENVENIDA",
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+            style = MaterialTheme.typography.labelSmall
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Mis Listas",
+                color = MaterialTheme.colorScheme.onPrimary,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center
+            ) { Text("👋") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatPill("Listas", lists.size.toString(), Modifier.weight(1f))
+            StatPill("Productos", productCount.toString(), Modifier.weight(1f))
+            StatPill("Comprados", purchasedCount.toString(), Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun StatPill(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f),
+            style = MaterialTheme.typography.labelSmall
+        )
+        Text(
+            value,
+            color = MaterialTheme.colorScheme.onPrimary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun ShoppingListCard(
+    list: ShoppingListUi,
+    onOpenClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val productCount = list.productCount.coerceAtLeast(0)
+    val purchasedCount = list.purchasedCount.coerceIn(0, productCount)
+    val progress = list.progressPercent.coerceIn(0, 100)
+    val categoryEmoji = when {
+        list.name.contains("desayuno", ignoreCase = true) -> "🥞"
+        list.name.contains("cumpleaños", ignoreCase = true) -> "🎂"
+        else -> "🛒"
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(13.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) { Text(categoryEmoji, style = MaterialTheme.typography.titleLarge) }
+
+                Column(
+                    modifier = Modifier.weight(1f).padding(start = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(list.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "${list.dateLabel}  ·  $productCount productos",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                TextButton(onClick = onDeleteClick) {
+                    Text("🗑", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            if (productCount == 0) {
+                Text(
+                    "Lista vacía",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "$purchasedCount de $productCount comprados",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    Text(
+                        "$progress%",
+                        color = if (progress in 1..99) {
+                            MaterialTheme.colorScheme.secondary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = progress / 100f,
+                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
+                    color = if (progress in 1..99) {
+                        MaterialTheme.colorScheme.secondary
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                if (list.productPreviewEmojis.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val previews = list.productPreviewEmojis.take(5)
+                        previews.forEach { productEmoji ->
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) { Text(productEmoji, style = MaterialTheme.typography.bodyMedium) }
+                        }
+                        val extraCount = productCount - previews.size
+                        if (extraCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) { Text("+$extraCount", style = MaterialTheme.typography.labelSmall) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyContent(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 36.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text("🛒", style = MaterialTheme.typography.headlineLarge)
+        Text("Todavía no tienes listas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            "Crea una lista para empezar a organizar tus compras.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+private fun LoadingContent(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(12.dp))
+        Text("Cargando listas…")
+    }
+}
+
+@Composable
+private fun ErrorContent(
+    message: String,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("No se pudieron cargar las listas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(message, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(onClick = onRetryClick, modifier = Modifier.padding(top = 12.dp)) {
+            Text("Reintentar")
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ListsScreenPreview() {
+    MaterialTheme {
+        ListsScreen(
+            uiState = ListsUiState.Success(
+                lists = listOf(
+                    ShoppingListUi(1, "Súper semanal", "Hoy", 2, 6, listOf("🍎", "🥛", "🍞", "🍅", "🥚")),
+                    ShoppingListUi(2, "Desayuno especial", "Ayer", 1, 2, listOf("🍌", "🥣")),
+                    ShoppingListUi(3, "Fiesta de cumpleaños", "Hace 3 días", 0, 0)
+                )
+            ),
+            onOpenList = {},
+            onDeleteList = {},
+            onCreateClick = {},
+            onRetryClick = {}
+        )
+    }
+}
