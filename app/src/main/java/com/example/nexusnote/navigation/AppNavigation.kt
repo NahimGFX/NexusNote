@@ -21,6 +21,9 @@ import com.example.nexusnote.viewmodel.HomeViewModelFactory
 import androidx.compose.runtime.LaunchedEffect
 import com.example.nexusnote.viewmodel.CreateListViewModel
 import com.example.nexusnote.viewmodel.CreateListViewModelFactory
+import com.example.nexusnote.ui.screens.lists.ListsScreen
+import com.example.nexusnote.viewmodel.ListsViewModel
+import com.example.nexusnote.viewmodel.ListsViewModelFactory
 
 
 @Composable
@@ -29,7 +32,7 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Routes.HOME
+        startDestination = Routes.LISTS
     ) {
 
         composable(Routes.HOME) {
@@ -54,7 +57,22 @@ fun AppNavigation() {
                 }
             )
         }
+        composable(Routes.LISTS) {
+            val context = LocalContext.current
+            val application = context.applicationContext as NexusNoteApplication
+            val listsViewModel: ListsViewModel = viewModel(
+                factory = ListsViewModelFactory(application.container.shoppingListRepository)
+            )
+            val uiState by listsViewModel.uiState.collectAsStateWithLifecycle()
 
+            ListsScreen(
+                uiState = uiState,
+                onOpenList = { listId -> navController.navigate(Routes.shoppingDetail(listId)) },
+                onDeleteList = listsViewModel::deleteList,
+                onCreateClick = { navController.navigate(Routes.CREATE_LIST) },
+                onRetryClick = listsViewModel::retry
+            )
+        }
 
 
         composable(Routes.CREATE_LIST) {
