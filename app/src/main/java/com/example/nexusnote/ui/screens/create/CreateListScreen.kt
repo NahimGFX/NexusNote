@@ -4,49 +4,61 @@ package com.example.nexusnote.ui.screens.create
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.nexusnote.viewmodel.CreateListUiState
 
 @Composable
 fun CreateListScreen(
-    onBackClick: () -> Unit,
-    onListCreated: (Int) -> Unit
+    uiState: CreateListUiState,
+    onNameChange: (String) -> Unit,
+    onCreateClick: () -> Unit,
+    onBackClick: () -> Unit
 ) {
-    var listName by remember { mutableStateOf("") }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("Create shopping list")
 
-        TextField(
-            value = listName,
-            onValueChange = { listName = it },
-            label = { Text("List name") }
+        OutlinedTextField(
+            value = uiState.name,
+            onValueChange = onNameChange,
+            label = { Text("List name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = !uiState.isSaving
         )
 
-        Button(
-            onClick = { onListCreated(1) },
-            enabled = listName.isNotBlank()
-        ) {
-            Text("Create")
+        if (uiState.error != null) {
+            Text(uiState.error)
         }
 
-        Button(onClick = onBackClick) {
+        Button(
+            onClick = onCreateClick,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isSaving
+        ) {
+            if (uiState.isSaving) {
+                CircularProgressIndicator()
+            } else {
+                Text("Create")
+            }
+        }
+
+        Button(
+            onClick = onBackClick,
+            enabled = !uiState.isSaving
+        ) {
             Text("Back")
         }
     }
