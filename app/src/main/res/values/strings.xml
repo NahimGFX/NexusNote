@@ -1,3 +1,18 @@
 <resources>
     <string name="app_name">NexusNote</string>
+
+
+
+    <string name="home_welcome">¡Bienvenido a NexusNote!</string>
+    <string name="home_description">Organiza tus compras desde un solo lugar.</string>
+    <string name="home_summary">Resumen de compras</string>
+    <string name="home_total_lists">Listas creadas: %1$d</string>
+    <string name="home_total_items">Artículos registrados: %1$d</string>
+    <string name="home_purchased_items">Artículos comprados: %1$d</string>
+    <string name="home_view_lists">Ver listas</string>
+    <string name="home_create_list">Nueva lista</string>
+    <string name="home_loading">Cargando resumen…</string>
+    <string name="home_error">No se pudo cargar el resumen.</string>
+    <string name="home_empty">Crea tu primera lista para comenzar.</string>
+
 </resources>
