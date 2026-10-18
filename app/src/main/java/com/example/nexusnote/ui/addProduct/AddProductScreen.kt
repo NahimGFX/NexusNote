@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -61,13 +62,26 @@ fun AddProductScreen(
     var menuExpandido by remember { mutableStateOf(false) }
     var mostrarSelectorImagen by remember { mutableStateOf(false) }
     var imagenUri by remember { mutableStateOf<Uri?>(null) }
+    var fotoCamara by remember { mutableStateOf<Bitmap?>(null) }
 
     val galeriaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
             imagenUri = uri
+            fotoCamara = null
             viewModel.seleccionarImagen("Galería")
+            mostrarSelectorImagen = false
+        }
+    }
+
+    val camaraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            fotoCamara = bitmap
+            imagenUri = null
+            viewModel.seleccionarImagen("Cámara")
             mostrarSelectorImagen = false
         }
     }
@@ -139,6 +153,14 @@ fun AddProductScreen(
                 ) {
                     val imagenRecurso = imagenesPredeterminadas[uiState.imagenSeleccionada]
                     when {
+                        uiState.imagenSeleccionada == "Cámara" && fotoCamara != null -> {
+                            Image(
+                                bitmap = fotoCamara!!.asImageBitmap(),
+                                contentDescription = "Fotografía tomada con la cámara",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                         uiState.imagenSeleccionada == "Galería" && bitmapSeleccionado != null -> {
                             Image(
                                 bitmap = bitmapSeleccionado,
@@ -197,7 +219,7 @@ fun AddProductScreen(
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
-                                onClick = { /* Cámara pendiente de implementar */ },
+                                onClick = { camaraLauncher.launch(null) },
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 4.dp)
                             ) { Text("📷 Cámara", fontSize = 12.sp) }
@@ -221,6 +243,7 @@ fun AddProductScreen(
                                         onClick = {
                                             viewModel.seleccionarImagen(categoria)
                                             imagenUri = null
+                                            fotoCamara = null
                                             mostrarSelectorImagen = false
                                         },
                                         modifier = Modifier.weight(1f).height(90.dp),
