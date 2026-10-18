@@ -10,7 +10,9 @@ import androidx.navigation.navArgument
 import com.example.nexusnote.ui.screens.home.HomeScreen
 import com.example.nexusnote.ui.screens.create.CreateListScreen
 import com.example.nexusnote.ui.screens.detail.ShoppingDetailScreen
-import com.example.nexusnote.ui.screens.addproduct.AddProductScreen
+import com.example.nexusnote.ui.addProduct.AddProductScreen
+import com.example.nexusnote.ui.addProduct.AddProductViewModel
+import com.example.nexusnote.ui.addProduct.AddProductViewModelFactory
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -136,18 +138,36 @@ fun AppNavigation() {
                 }
             )
         ) { backStackEntry ->
+
             val listId =
                 backStackEntry.arguments?.getInt(Routes.LIST_ID) ?: 0
 
+            val context = LocalContext.current
+            val application =
+                context.applicationContext as NexusNoteApplication
+
+            val addProductViewModel: AddProductViewModel = viewModel(
+                factory = AddProductViewModelFactory(
+                    application.container.productRepository,
+                    application.container.shoppingListItemRepository
+                )
+            )
+
             AddProductScreen(
-                listId = listId,
+                viewModel = addProductViewModel,
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onProductSaved = {
-                    navController.popBackStack()
+                onAddProduct = { nombre, cantidad, unidad ->
+                    addProductViewModel.guardarProducto(
+                        listId = listId,
+                        onSuccess = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
             )
         }
+
     }
 }

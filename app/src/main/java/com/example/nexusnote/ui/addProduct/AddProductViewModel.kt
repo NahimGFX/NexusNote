@@ -1,10 +1,16 @@
 package com.example.nexusnote.ui.addProduct
 
 import androidx.lifecycle.ViewModel
+import com.example.nexusnote.data.repository.ProductRepository
+import com.example.nexusnote.data.repository.ShoppingListItemRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import com.example.nexusnote.data.local.entity.ProductEntity
+import com.example.nexusnote.data.local.entity.ShoppingListItemEntity
+import kotlinx.coroutines.launch
 
 data class AddProductUiState(
     val nombre: String = "",
@@ -18,7 +24,11 @@ data class AddProductUiState(
         get() = nombre.isNotBlank() && cantidad > 0
 }
 
-class AddProductViewModel : ViewModel() {
+class AddProductViewModel(
+    private val productRepository: ProductRepository,
+    private val shoppingListItemRepository: ShoppingListItemRepository
+) : ViewModel() {
+
 
     private val _uiState = MutableStateFlow(AddProductUiState())
 
@@ -96,6 +106,51 @@ class AddProductViewModel : ViewModel() {
         }
 
         return true
+    }
+
+
+    fun guardarProducto(
+        listId: Int,
+        onSuccess: () -> Unit
+    ) {
+        if (!validarFormulario()) return
+
+        if (listId <= 0) {
+            _uiState.update {
+                it.copy(mensaje = "La lista de compras no es válida")
+            }
+            return
+        }
+
+        val estado = _uiState.value
+
+        viewModelScope.launch {
+            try {
+                val productId = productRepository.insertProduct(
+                    ProductEntity(
+                        name = estado.nombre.trim()
+                    )
+                )
+
+                shoppingListItemRepository.insertItem(
+                    ShoppingListItemEntity(
+                        shoppingListId = listId,
+                        productId = productId,
+                        quantity = estado.cantidad
+                    )
+                )
+
+                limpiarFormulario()
+                onSuccess()
+
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        mensaje = "No se pudo guardar el producto"
+                    )
+                }
+            }
+        }
     }
 
     fun limpiarFormulario() {

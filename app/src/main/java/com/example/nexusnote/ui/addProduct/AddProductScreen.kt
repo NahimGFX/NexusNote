@@ -394,10 +394,3 @@ fun AddProductScreen(
         }
     }
 }
-
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun AddProductScreenPreview() {
-    val previewViewModel = remember { AddProductViewModel() }
-    AddProductScreen(viewModel = previewViewModel)
-}
