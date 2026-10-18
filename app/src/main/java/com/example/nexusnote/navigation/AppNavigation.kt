@@ -6,22 +6,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-
 import com.example.nexusnote.NexusNoteApplication
 import com.example.nexusnote.ui.screens.home.HomeScreen
 import com.example.nexusnote.ui.screens.lists.ListsScreen
 import com.example.nexusnote.ui.screens.create.CreateListScreen
-import com.example.nexusnote.ui.screens.addproduct.AddProductScreen
-
+import com.example.nexusnote.ui.addProduct.AddProductScreen
+import com.example.nexusnote.ui.addProduct.AddProductViewModel
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailScreen
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModelFactory
-
 import com.example.nexusnote.viewmodel.HomeViewModel
 import com.example.nexusnote.viewmodel.HomeViewModelFactory
 import com.example.nexusnote.viewmodel.ListsViewModel
@@ -126,7 +125,7 @@ fun AppNavigation() {
             )
         }
 
-        // TU PANTALLA: DETALLE DE COMPRAS
+        // PANTALLA DETALLE DE COMPRAS DEL EQUIPO
         composable(
             route = Routes.SHOPPING_DETAIL_ROUTE,
             arguments = listOf(
@@ -139,7 +138,6 @@ fun AppNavigation() {
             val listId = backStackEntry.arguments
                 ?.getInt(Routes.LIST_ID) ?: 0
 
-            // Crear ViewModel utilizando los tres repositorios reales
             val detailViewModel: ShoppingDetailViewModel = viewModel(
                 viewModelStoreOwner = backStackEntry,
                 factory = ShoppingDetailViewModelFactory(
@@ -166,7 +164,7 @@ fun AppNavigation() {
             )
         }
 
-        // PANTALLA PARA AGREGAR PRODUCTOS
+        // PANTALLA AGREGAR PRODUCTO
         composable(
             route = Routes.ADD_PRODUCT_ROUTE,
             arguments = listOf(
@@ -179,13 +177,21 @@ fun AppNavigation() {
             val listId = backStackEntry.arguments
                 ?.getInt(Routes.LIST_ID) ?: 0
 
+            val addProductViewModel: AddProductViewModel =
+                hiltViewModel()
+
             AddProductScreen(
-                listId = listId,
+                viewModel = addProductViewModel,
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onProductSaved = {
-                    navController.popBackStack()
+                onAddProduct = { _, _, _ ->
+                    addProductViewModel.guardarProducto(
+                        listId = listId,
+                        onSuccess = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
             )
         }
