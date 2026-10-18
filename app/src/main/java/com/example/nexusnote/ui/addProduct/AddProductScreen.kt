@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nexusnote.R
+import androidx.compose.ui.text.TextStyle
 
 private val VerdeFondo = Color(0xFFF0FFF5)
 private val VerdePrincipal = Color(0xFF00A651)
@@ -103,11 +104,11 @@ fun AddProductScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Agregar producto", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Agregar producto", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = Color.Black)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -124,7 +125,7 @@ fun AddProductScreen(
                     enabled = uiState.formularioValido,
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = VerdePrincipal)
+                    colors = ButtonDefaults.buttonColors(containerColor = VerdePrincipal, contentColor = Color.Black)
                 ) {
                     Text("Agregar producto", fontWeight = FontWeight.Bold)
                 }
@@ -309,6 +310,7 @@ fun AddProductScreen(
             OutlinedTextField(
                 value = uiState.nombre,
                 onValueChange = viewModel::actualizarNombre,
+                textStyle = TextStyle(color = Color.Black),
                 placeholder = { Text("Ej: Leche entera...") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -365,12 +367,15 @@ fun AddProductScreen(
                 ) {
                     OutlinedTextField(
                         value = uiState.unidad,
+                        textStyle = TextStyle(color = Color.Black),
                         onValueChange = {},
                         readOnly = true,
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().menuAnchor(),
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White
                         )
