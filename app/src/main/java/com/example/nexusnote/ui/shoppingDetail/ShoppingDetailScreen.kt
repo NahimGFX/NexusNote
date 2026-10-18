@@ -1,4 +1,3 @@
-
 package com.example.nexusnote.ui.shoppingDetail
 
 import androidx.compose.foundation.background
@@ -9,36 +8,39 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 
 private val Green = Color(0xFF11A34A)
 private val LightBackground = Color(0xFFEFFCF3)
 private val GrayText = Color(0xFF94A3B8)
+private val DarkText = Color(0xFF101827)
 
-// Conecta la pantalla con el ViewModel
 @Composable
 fun ShoppingDetailScreen(
     listId: Int,
     onBack: () -> Unit = {},
     onAddProduct: () -> Unit = {},
-    viewModel: ShoppingDetailViewModel = viewModel()
+    viewModel: ShoppingDetailViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(listId) {
+    LaunchedEffect(listId, viewModel) {
         viewModel.loadList(listId)
     }
 
@@ -52,7 +54,6 @@ fun ShoppingDetailScreen(
     )
 }
 
-// Interfaz visual de detalle de compras
 @Composable
 private fun ShoppingDetailContent(
     uiState: ShoppingDetailUiState,
@@ -67,12 +68,14 @@ private fun ShoppingDetailContent(
             .fillMaxSize()
             .background(LightBackground)
     ) {
+
+        // Encabezado verde
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Green,
-                    RoundedCornerShape(
+                    color = Green,
+                    shape = RoundedCornerShape(
                         bottomStart = 28.dp,
                         bottomEnd = 28.dp
                     )
@@ -80,7 +83,7 @@ private fun ShoppingDetailContent(
                 .padding(
                     start = 20.dp,
                     end = 20.dp,
-                    top = 45.dp,
+                    top = 36.dp,
                     bottom = 20.dp
                 )
         ) {
@@ -89,7 +92,8 @@ private fun ShoppingDetailContent(
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        Icons.Default.ArrowBack,
+                        imageVector =
+                            Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Volver",
                         tint = Color.White
                     )
@@ -99,9 +103,10 @@ private fun ShoppingDetailContent(
                     Text(
                         text = "🛒 ${uiState.listName}",
                         color = Color.White,
-                        fontSize = 23.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
+
                     Text(
                         text = uiState.dateLabel,
                         color = Color.White.copy(alpha = 0.75f),
@@ -110,124 +115,185 @@ private fun ShoppingDetailContent(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "${uiState.purchasedCount} de ${uiState.totalCount} comprados",
+                    text = "${uiState.purchasedCount} de " +
+                            "${uiState.totalCount} comprados",
                     color = Color.White,
                     fontSize = 13.sp
                 )
 
                 Text(
-                    "${uiState.percentage}%",
+                    text = "${uiState.percentage}%",
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(Modifier.height(7.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             LinearProgressIndicator(
                 progress = { uiState.progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp),
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(8.dp)),
                 color = Color.White,
                 trackColor = Color.White.copy(alpha = 0.3f)
             )
         }
 
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Green)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                if (uiState.errorMessage != null) {
-                    item {
+        // Contenido de la pantalla
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            when {
+                uiState.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Green
+                    )
+                }
+
+                uiState.errorMessage != null &&
+                        uiState.products.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "No se pudieron cargar los productos",
+                            fontWeight = FontWeight.Bold,
+                            color = DarkText
+                        )
+
                         Text(
                             text = uiState.errorMessage,
-                            color = MaterialTheme.colorScheme.error
+                            color = GrayText,
+                            fontSize = 13.sp
                         )
                     }
                 }
 
-                item {
-                    SectionTitle(
-                        "PENDIENTES (${uiState.pendingProducts.size})"
-                    )
-                }
-
-                items(
-                    items = uiState.pendingProducts,
-                    key = { it.id }
-                ) { product ->
-                    ProductCard(
-                        product = product,
-                        onToggle = {
-                            onToggleProduct(product.id)
-                        },
-                        onQuantityChange = { quantity ->
-                            onQuantityChange(product.id, quantity)
-                        },
-                        onDelete = {
-                            onDeleteProduct(product.id)
-                        }
-                    )
-                }
-
-                item {
-                    Spacer(Modifier.height(10.dp))
-                    SectionTitle(
-                        "COMPRADOS (${uiState.purchasedProducts.size})"
-                    )
-                }
-
-                items(
-                    items = uiState.purchasedProducts,
-                    key = { it.id }
-                ) { product ->
-                    ProductCard(
-                        product = product,
-                        onToggle = {
-                            onToggleProduct(product.id)
-                        },
-                        onQuantityChange = { quantity ->
-                            onQuantityChange(product.id, quantity)
-                        },
-                        onDelete = {
-                            onDeleteProduct(product.id)
-                        }
-                    )
-                }
-
-                if (uiState.products.isEmpty()) {
-                    item {
+                uiState.products.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Text(
-                            "Esta lista todavía no tiene productos.",
-                            color = GrayText,
-                            fontSize = 14.sp
+                            text = "🛒",
+                            fontSize = 48.sp
                         )
+
+                        Text(
+                            text = "Tu lista está vacía",
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DarkText
+                        )
+
+                        Text(
+                            text = "Todavía no hay productos. " +
+                                    "Puedes agregar el primero.",
+                            color = GrayText,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(20.dp),
+                        verticalArrangement =
+                            Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (uiState.errorMessage != null) {
+                            item {
+                                Text(
+                                    text = uiState.errorMessage,
+                                    color =
+                                        MaterialTheme.colorScheme.error,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+
+                        item {
+                            SectionTitle(
+                                "PENDIENTES " +
+                                        "(${uiState.pendingProducts.size})"
+                            )
+                        }
+
+                        items(
+                            items = uiState.pendingProducts,
+                            key = { "pending_${it.id}" }
+                        ) { product ->
+                            ProductCard(
+                                product = product,
+                                onToggle = {
+                                    onToggleProduct(product.id)
+                                },
+                                onQuantityChange = { quantity ->
+                                    onQuantityChange(
+                                        product.id,
+                                        quantity
+                                    )
+                                },
+                                onDelete = {
+                                    onDeleteProduct(product.id)
+                                }
+                            )
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SectionTitle(
+                                "COMPRADOS " +
+                                        "(${uiState.purchasedProducts.size})"
+                            )
+                        }
+
+                        items(
+                            items = uiState.purchasedProducts,
+                            key = { "purchased_${it.id}" }
+                        ) { product ->
+                            ProductCard(
+                                product = product,
+                                onToggle = {
+                                    onToggleProduct(product.id)
+                                },
+                                onQuantityChange = { quantity ->
+                                    onQuantityChange(
+                                        product.id,
+                                        quantity
+                                    )
+                                },
+                                onDelete = {
+                                    onDeleteProduct(product.id)
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
 
+        // Botón para navegar a Agregar producto
         Button(
             onClick = onAddProduct,
             modifier = Modifier
@@ -243,7 +309,7 @@ private fun ShoppingDetailContent(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                "＋  Agregar producto",
+                text = "＋  Agregar producto",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -263,6 +329,42 @@ private fun SectionTitle(title: String) {
             bottom = 5.dp
         )
     )
+}
+
+@Composable
+private fun ProductPhoto(
+    product: ShoppingDetailProduct
+) {
+    var imageFailed by remember(product.photoUri) {
+        mutableStateOf(false)
+    }
+
+    Box(
+        modifier = Modifier
+            .size(49.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF1F5F9)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!product.photoUri.isNullOrBlank() && !imageFailed) {
+            AsyncImage(
+                model = product.photoUri,
+                contentDescription = "Foto de ${product.name}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onState = { state ->
+                    if (state is AsyncImagePainter.State.Error) {
+                        imageFailed = true
+                    }
+                }
+            )
+        } else {
+            Text(
+                text = product.emoji,
+                fontSize = 27.sp
+            )
+        }
+    }
 }
 
 @Composable
@@ -287,23 +389,28 @@ private fun ProductCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
+            // Marcar como comprado
             Box(
                 modifier = Modifier
                     .size(34.dp)
-                    .background(
-                        if (product.purchased) Green
-                        else Color.White,
-                        CircleShape
-                    )
+                    .clip(CircleShape)
                     .clickable { onToggle() },
                 contentAlignment = Alignment.Center
             ) {
                 if (product.purchased) {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = "Comprado",
-                        tint = Color.White
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Green, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Comprado",
+                            tint = Color.White
+                        )
+                    }
                 } else {
                     RadioButton(
                         selected = false,
@@ -313,40 +420,35 @@ private fun ProductCard(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .padding(start = 9.dp)
-                    .size(49.dp)
-                    .background(
-                        Color(0xFFF1F5F9),
-                        RoundedCornerShape(12.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    product.emoji,
-                    fontSize = 27.sp
-                )
-            }
+            Spacer(modifier = Modifier.width(9.dp))
 
+            // Fotografía o imagen de respaldo
+            ProductPhoto(product = product)
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Nombre y cantidad
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = product.name,
-                    color = if (product.purchased)
-                        GrayText else Color(0xFF101827),
+                    color = if (product.purchased) {
+                        GrayText
+                    } else {
+                        DarkText
+                    },
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    textDecoration = if (product.purchased)
+                    textDecoration = if (product.purchased) {
                         TextDecoration.LineThrough
-                    else TextDecoration.None
+                    } else {
+                        TextDecoration.None
+                    }
                 )
 
                 Text(
-                    "${product.quantity} ${product.unit}",
+                    text = "${product.quantity} ${product.unit}",
                     color = GrayText,
                     fontSize = 12.sp
                 )
@@ -354,33 +456,36 @@ private fun ProductCard(
 
             if (product.purchased) {
                 Text(
-                    "✓ Listo",
+                    text = "✓ Listo",
                     color = Green,
                     fontSize = 12.sp
                 )
             } else {
                 Text(
-                    "Pendiente",
+                    text = "Pendiente",
                     color = GrayText,
                     fontSize = 11.sp
                 )
             }
 
+            // Opciones del producto
             Box {
                 IconButton(
                     onClick = { expanded = true },
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "Opciones",
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opciones del producto",
                         tint = GrayText
                     )
                 }
 
                 DropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onDismissRequest = {
+                        expanded = false
+                    }
                 ) {
                     DropdownMenuItem(
                         text = { Text("Aumentar cantidad") },
@@ -414,29 +519,35 @@ private fun ProductCard(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+// Vista previa independiente de Room
+@Preview(
+    showBackground = true,
+    showSystemUi = true
+)
 @Composable
 fun ShoppingDetailScreenPreview() {
     val previewState = ShoppingDetailUiState(
         listId = 1,
+        listName = "Súper semanal",
+        dateLabel = "Hoy",
         products = listOf(
             ShoppingDetailProduct(
-                1, "Leche entera", 2, "litros", "🥛"
+                1, "Leche entera", 2, "unidades", "🥛"
             ),
             ShoppingDetailProduct(
-                2, "Pan integral", 1, "pieza", "🍞"
+                2, "Pan integral", 1, "unidades", "🍞"
             ),
             ShoppingDetailProduct(
-                3, "Huevos", 12, "pzas", "🥚"
+                3, "Huevos", 12, "unidades", "🥚"
             ),
             ShoppingDetailProduct(
-                4, "Queso manchego", 200, "g", "🧀"
+                4, "Queso manchego", 200, "unidades", "🧀"
             ),
             ShoppingDetailProduct(
-                5, "Manzanas rojas", 6, "pzas", "🍎", true
+                5, "Manzanas rojas", 6, "unidades", "🍎", true
             ),
             ShoppingDetailProduct(
-                6, "Tomates", 500, "g", "🍅", true
+                6, "Tomates", 5, "unidades", "🍅", true
             )
         )
     )

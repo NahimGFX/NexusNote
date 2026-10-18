@@ -1,12 +1,12 @@
 package com.example.nexusnote.ui.shoppingDetail
-
 data class ShoppingDetailProduct(
     val id: Int,
     val name: String,
     val quantity: Int,
-    val unit: String,
-    val emoji: String,
-    val purchased: Boolean = false
+    val unit: String = "unidades",
+    val emoji: String = "🛒",
+    val purchased: Boolean = false,
+    val photoUri: String? = null
 )
 
 data class ShoppingDetailUiState(
