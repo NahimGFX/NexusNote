@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import android.graphics.Bitmap
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nexusnote.R
 import androidx.compose.ui.text.TextStyle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private val VerdeFondo = Color(0xFFF0FFF5)
 private val VerdePrincipal = Color(0xFF00A651)
@@ -52,16 +54,13 @@ private val categorias = listOf(
 )
 private val unidades = listOf("pzas", "kg", "g", "litros", "ml", "paquetes", "latas")
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductScreen(
     viewModel: AddProductViewModel,
     onBackClick: () -> Unit = {},
     onAddProduct: (String, Int, String) -> Unit = { _, _, _ -> }
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    var menuExpandido by remember { mutableStateOf(false) }
-    var mostrarSelectorImagen by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var imagenUri by remember { mutableStateOf<Uri?>(null) }
     var fotoCamara by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -72,7 +71,6 @@ fun AddProductScreen(
             imagenUri = uri
             fotoCamara = null
             viewModel.seleccionarImagen("Galería")
-            mostrarSelectorImagen = false
         }
     }
 
@@ -83,7 +81,6 @@ fun AddProductScreen(
             fotoCamara = bitmap
             imagenUri = null
             viewModel.seleccionarImagen("Cámara")
-            mostrarSelectorImagen = false
         }
     }
 
@@ -98,6 +95,48 @@ fun AddProductScreen(
         }
     }
 
+    AddProductContent(
+        uiState = uiState,
+        onBackClick = onBackClick,
+        onNombreChange = viewModel::actualizarNombre,
+        onAumentarCantidad = viewModel::aumentarCantidad,
+        onDisminuirCantidad = viewModel::disminuirCantidad,
+        onUnidadChange = viewModel::seleccionarUnidad,
+        onImagenChange = { categoria ->
+            viewModel.seleccionarImagen(categoria)
+            imagenUri = null
+            fotoCamara = null
+        },
+        onAbrirCamara = { camaraLauncher.launch(null) },
+        onAbrirGaleria = { galeriaLauncher.launch("image/*") },
+        fotoCamara = fotoCamara?.asImageBitmap(),
+        bitmapSeleccionado = bitmapSeleccionado,
+        onAgregarProducto = {
+            if (viewModel.validarFormulario()) {
+                onAddProduct(uiState.nombre.trim(), uiState.cantidad, uiState.unidad)
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddProductContent(
+    uiState: AddProductUiState,
+    onBackClick: () -> Unit,
+    onNombreChange: (String) -> Unit,
+    onAumentarCantidad: () -> Unit,
+    onDisminuirCantidad: () -> Unit,
+    onUnidadChange: (String) -> Unit,
+    onImagenChange: (String) -> Unit,
+    onAbrirCamara: () -> Unit,
+    onAbrirGaleria: () -> Unit,
+    fotoCamara: ImageBitmap?,
+    bitmapSeleccionado: ImageBitmap?,
+    onAgregarProducto: () -> Unit
+) {
+    var menuExpandido by remember { mutableStateOf(false) }
+    var mostrarSelectorImagen by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = VerdeFondo,
@@ -118,9 +157,7 @@ fun AddProductScreen(
             Surface(color = Color.White, shadowElevation = 6.dp) {
                 Button(
                     onClick = {
-                        if (viewModel.validarFormulario()) {
-                            onAddProduct(uiState.nombre.trim(), uiState.cantidad, uiState.unidad)
-                        }
+                        onAgregarProducto()
                     },
                     enabled = uiState.formularioValido,
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp),
@@ -156,7 +193,7 @@ fun AddProductScreen(
                     when {
                         uiState.imagenSeleccionada == "Cámara" && fotoCamara != null -> {
                             Image(
-                                bitmap = fotoCamara!!.asImageBitmap(),
+                                bitmap = fotoCamara,
                                 contentDescription = "Fotografía tomada con la cámara",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -220,12 +257,12 @@ fun AddProductScreen(
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
-                                onClick = { camaraLauncher.launch(null) },
+                                onClick = { mostrarSelectorImagen = false; onAbrirCamara() },
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 4.dp)
                             ) { Text("📷 Cámara", fontSize = 12.sp) }
                             OutlinedButton(
-                                onClick = { galeriaLauncher.launch("image/*") },
+                                onClick = { mostrarSelectorImagen = false; onAbrirGaleria() },
                                 modifier = Modifier.weight(1f)
                             ) { Text("Galería", fontSize = 12.sp) }
                         }
@@ -242,9 +279,7 @@ fun AddProductScreen(
                                     val seleccionada = uiState.imagenSeleccionada == categoria
                                     Card(
                                         onClick = {
-                                            viewModel.seleccionarImagen(categoria)
-                                            imagenUri = null
-                                            fotoCamara = null
+                                            onImagenChange(categoria)
                                             mostrarSelectorImagen = false
                                         },
                                         modifier = Modifier.weight(1f).height(90.dp),
@@ -309,7 +344,7 @@ fun AddProductScreen(
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = uiState.nombre,
-                onValueChange = viewModel::actualizarNombre,
+                onValueChange = onNombreChange,
                 textStyle = TextStyle(color = Color.Black),
                 placeholder = { Text("Ej: Leche entera...") },
                 singleLine = true,
@@ -352,11 +387,11 @@ fun AddProductScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = viewModel::disminuirCantidad) {
+                    IconButton(onClick = onDisminuirCantidad) {
                         Icon(Icons.Default.Remove, contentDescription = "Disminuir cantidad")
                     }
                     Text(uiState.cantidad.toString(), fontWeight = FontWeight.Bold)
-                    IconButton(onClick = viewModel::aumentarCantidad) {
+                    IconButton(onClick = onAumentarCantidad) {
                         Icon(Icons.Default.Add, contentDescription = "Aumentar cantidad")
                     }
                 }
@@ -388,7 +423,7 @@ fun AddProductScreen(
                             DropdownMenuItem(
                                 text = { Text(opcion) },
                                 onClick = {
-                                    viewModel.seleccionarUnidad(opcion)
+                                    onUnidadChange(opcion)
                                     menuExpandido = false
                                 }
                             )

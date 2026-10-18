@@ -1,4 +1,3 @@
-
 package com.example.nexusnote.navigation
 
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import com.example.nexusnote.viewmodel.CreateListViewModelFactory
 import com.example.nexusnote.ui.screens.lists.ListsScreen
 import com.example.nexusnote.viewmodel.ListsViewModel
 import com.example.nexusnote.viewmodel.ListsViewModelFactory
+import androidx.hilt.navigation.compose.hiltViewModel
 
 
 @Composable
@@ -142,16 +142,7 @@ fun AppNavigation() {
             val listId =
                 backStackEntry.arguments?.getInt(Routes.LIST_ID) ?: 0
 
-            val context = LocalContext.current
-            val application =
-                context.applicationContext as NexusNoteApplication
-
-            val addProductViewModel: AddProductViewModel = viewModel(
-                factory = AddProductViewModelFactory(
-                    application.container.productRepository,
-                    application.container.shoppingListItemRepository
-                )
-            )
+            val addProductViewModel: AddProductViewModel = hiltViewModel()
 
             AddProductScreen(
                 viewModel = addProductViewModel,

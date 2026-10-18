@@ -11,6 +11,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.nexusnote.data.local.entity.ProductEntity
 import com.example.nexusnote.data.local.entity.ShoppingListItemEntity
 import kotlinx.coroutines.launch
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 data class AddProductUiState(
     val nombre: String = "",
@@ -24,7 +26,8 @@ data class AddProductUiState(
         get() = nombre.isNotBlank() && cantidad > 0
 }
 
-class AddProductViewModel(
+@HiltViewModel
+class AddProductViewModel @Inject constructor(
     private val productRepository: ProductRepository,
     private val shoppingListItemRepository: ShoppingListItemRepository
 ) : ViewModel() {
