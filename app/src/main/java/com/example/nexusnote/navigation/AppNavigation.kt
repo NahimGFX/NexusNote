@@ -1,43 +1,49 @@
-
 package com.example.nexusnote.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.nexusnote.ui.screens.home.HomeScreen
-import com.example.nexusnote.ui.screens.create.CreateListScreen
-import com.example.nexusnote.ui.screens.detail.ShoppingDetailScreen
-import com.example.nexusnote.ui.screens.addproduct.AddProductScreen
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.example.nexusnote.NexusNoteApplication
+import com.example.nexusnote.ui.screens.home.HomeScreen
+import com.example.nexusnote.ui.screens.lists.ListsScreen
+import com.example.nexusnote.ui.screens.create.CreateListScreen
+import com.example.nexusnote.ui.screens.addproduct.AddProductScreen
+
+import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailScreen
+import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
+import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModelFactory
+
 import com.example.nexusnote.viewmodel.HomeViewModel
 import com.example.nexusnote.viewmodel.HomeViewModelFactory
-import androidx.compose.runtime.LaunchedEffect
-import com.example.nexusnote.viewmodel.CreateListViewModel
-import com.example.nexusnote.viewmodel.CreateListViewModelFactory
-import com.example.nexusnote.ui.screens.lists.ListsScreen
 import com.example.nexusnote.viewmodel.ListsViewModel
 import com.example.nexusnote.viewmodel.ListsViewModelFactory
-
+import com.example.nexusnote.viewmodel.CreateListViewModel
+import com.example.nexusnote.viewmodel.CreateListViewModelFactory
 
 @Composable
 fun AppNavigation() {
+
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val application =
+        context.applicationContext as NexusNoteApplication
 
     NavHost(
         navController = navController,
         startDestination = Routes.LISTS
     ) {
 
+        // PANTALLA DE INICIO
         composable(Routes.HOME) {
-            val context = LocalContext.current
-            val application = context.applicationContext as NexusNoteApplication
 
             val homeViewModel: HomeViewModel = viewModel(
                 factory = HomeViewModelFactory(
@@ -45,7 +51,8 @@ fun AppNavigation() {
                 )
             )
 
-            val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+            val uiState by homeViewModel.uiState
+                .collectAsStateWithLifecycle()
 
             HomeScreen(
                 uiState = uiState,
@@ -53,31 +60,42 @@ fun AppNavigation() {
                     navController.navigate(Routes.CREATE_LIST)
                 },
                 onListClick = { listId ->
-                    navController.navigate(Routes.shoppingDetail(listId))
+                    navController.navigate(
+                        Routes.shoppingDetail(listId)
+                    )
                 }
             )
         }
+
+        // PANTALLA DE LISTAS
         composable(Routes.LISTS) {
-            val context = LocalContext.current
-            val application = context.applicationContext as NexusNoteApplication
+
             val listsViewModel: ListsViewModel = viewModel(
-                factory = ListsViewModelFactory(application.container.shoppingListRepository)
+                factory = ListsViewModelFactory(
+                    application.container.shoppingListRepository
+                )
             )
-            val uiState by listsViewModel.uiState.collectAsStateWithLifecycle()
+
+            val uiState by listsViewModel.uiState
+                .collectAsStateWithLifecycle()
 
             ListsScreen(
                 uiState = uiState,
-                onOpenList = { listId -> navController.navigate(Routes.shoppingDetail(listId)) },
+                onOpenList = { listId ->
+                    navController.navigate(
+                        Routes.shoppingDetail(listId)
+                    )
+                },
                 onDeleteList = listsViewModel::deleteList,
-                onCreateClick = { navController.navigate(Routes.CREATE_LIST) },
+                onCreateClick = {
+                    navController.navigate(Routes.CREATE_LIST)
+                },
                 onRetryClick = listsViewModel::retry
             )
         }
 
-
+        // PANTALLA PARA CREAR LISTAS
         composable(Routes.CREATE_LIST) {
-            val context = LocalContext.current
-            val application = context.applicationContext as NexusNoteApplication
 
             val createListViewModel: CreateListViewModel = viewModel(
                 factory = CreateListViewModelFactory(
@@ -85,11 +103,14 @@ fun AppNavigation() {
                 )
             )
 
-            val uiState by createListViewModel.uiState.collectAsStateWithLifecycle()
+            val uiState by createListViewModel.uiState
+                .collectAsStateWithLifecycle()
 
             LaunchedEffect(createListViewModel) {
                 createListViewModel.events.collect { listId ->
-                    navController.navigate(Routes.shoppingDetail(listId)) {
+                    navController.navigate(
+                        Routes.shoppingDetail(listId)
+                    ) {
                         popUpTo(Routes.HOME)
                     }
                 }
@@ -105,7 +126,7 @@ fun AppNavigation() {
             )
         }
 
-
+        // TU PANTALLA: DETALLE DE COMPRAS
         composable(
             route = Routes.SHOPPING_DETAIL_ROUTE,
             arguments = listOf(
@@ -114,20 +135,38 @@ fun AppNavigation() {
                 }
             )
         ) { backStackEntry ->
-            val listId =
-                backStackEntry.arguments?.getInt(Routes.LIST_ID) ?: 0
+
+            val listId = backStackEntry.arguments
+                ?.getInt(Routes.LIST_ID) ?: 0
+
+            // Crear ViewModel utilizando los tres repositorios reales
+            val detailViewModel: ShoppingDetailViewModel = viewModel(
+                viewModelStoreOwner = backStackEntry,
+                factory = ShoppingDetailViewModelFactory(
+                    itemRepository =
+                        application.container.shoppingListItemRepository,
+                    productRepository =
+                        application.container.productRepository,
+                    listRepository =
+                        application.container.shoppingListRepository
+                )
+            )
 
             ShoppingDetailScreen(
                 listId = listId,
-                onBackClick = {
+                onBack = {
                     navController.popBackStack()
                 },
-                onAddProductClick = {
-                    navController.navigate(Routes.addProduct(listId))
-                }
+                onAddProduct = {
+                    navController.navigate(
+                        Routes.addProduct(listId)
+                    )
+                },
+                viewModel = detailViewModel
             )
         }
 
+        // PANTALLA PARA AGREGAR PRODUCTOS
         composable(
             route = Routes.ADD_PRODUCT_ROUTE,
             arguments = listOf(
@@ -136,8 +175,9 @@ fun AppNavigation() {
                 }
             )
         ) { backStackEntry ->
-            val listId =
-                backStackEntry.arguments?.getInt(Routes.LIST_ID) ?: 0
+
+            val listId = backStackEntry.arguments
+                ?.getInt(Routes.LIST_ID) ?: 0
 
             AddProductScreen(
                 listId = listId,
