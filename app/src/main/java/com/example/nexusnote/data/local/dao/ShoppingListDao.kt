@@ -31,6 +31,7 @@ interface ShoppingListDao {
     SELECT
         shopping_lists.id AS id,
         shopping_lists.name AS name,
+        shopping_lists.icon AS icon,
         shopping_lists.createdAt AS createdAt,
         COUNT(shopping_list_items.id) AS productCount,
         COALESCE(
@@ -43,6 +44,7 @@ interface ShoppingListDao {
     GROUP BY
         shopping_lists.id,
         shopping_lists.name,
+        shopping_lists.icon,
         shopping_lists.createdAt
     ORDER BY shopping_lists.createdAt DESC
 """)

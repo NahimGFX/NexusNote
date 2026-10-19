@@ -12,7 +12,7 @@ data class ShoppingDetailProduct(
 data class ShoppingDetailUiState(
     val listId: Int = 0,
     val listName: String = "Súper semanal",
-    val dateLabel: String = "Hoy",
+    val dateLabel: String = "",
     val products: List<ShoppingDetailProduct> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null

@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import androidx.lifecycle.viewModelScope
 import com.example.nexusnote.data.local.entity.ProductEntity
 import com.example.nexusnote.data.local.entity.ShoppingListItemEntity
@@ -19,11 +21,17 @@ data class AddProductUiState(
     val cantidad: Int = 1,
     val unidad: String = "pzas",
     val imagenSeleccionada: String = "Sin foto",
+    val photoUri: String? = null,
     val errorNombre: String? = null,
-    val mensaje: String? = null
+    val isSaving: Boolean = false
 ) {
     val formularioValido: Boolean
         get() = nombre.isNotBlank() && cantidad > 0
+}
+
+sealed interface AddProductEvent {
+    data class ShowMessage(val message: String) : AddProductEvent
+    data object NavigateBack : AddProductEvent
 }
 
 @HiltViewModel
@@ -32,18 +40,21 @@ class AddProductViewModel @Inject constructor(
     private val shoppingListItemRepository: ShoppingListItemRepository
 ) : ViewModel() {
 
+    private val saveLock = Any()
 
     private val _uiState = MutableStateFlow(AddProductUiState())
 
     val uiState: StateFlow<AddProductUiState> =
         _uiState.asStateFlow()
 
+    private val _events = Channel<AddProductEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
+
     fun actualizarNombre(nombre: String) {
         _uiState.update {
             it.copy(
                 nombre = nombre,
-                errorNombre = null,
-                mensaje = null
+                errorNombre = null
             )
         }
     }
@@ -87,6 +98,18 @@ class AddProductViewModel @Inject constructor(
         }
     }
 
+    fun seleccionarFoto(photoUri: String?) {
+        _uiState.update {
+            it.copy(photoUri = photoUri)
+        }
+    }
+
+    fun reportarErrorImagen() {
+        _events.trySend(
+            AddProductEvent.ShowMessage("No se pudo guardar la imagen seleccionada")
+        )
+    }
+
     fun validarFormulario(): Boolean {
         val estado = _uiState.value
 
@@ -100,11 +123,9 @@ class AddProductViewModel @Inject constructor(
         }
 
         if (estado.cantidad <= 0) {
-            _uiState.update {
-                it.copy(
-                    mensaje = "La cantidad debe ser mayor a cero"
-                )
-            }
+            _events.trySend(
+                AddProductEvent.ShowMessage("La cantidad debe ser mayor a cero")
+            )
             return false
         }
 
@@ -112,26 +133,29 @@ class AddProductViewModel @Inject constructor(
     }
 
 
-    fun guardarProducto(
-        listId: Int,
-        onSuccess: () -> Unit
-    ) {
-        if (!validarFormulario()) return
+    fun guardarProducto(listId: Int) {
+        val estado = synchronized(saveLock) {
+            if (_uiState.value.isSaving) return
+            if (!validarFormulario()) return
 
-        if (listId <= 0) {
-            _uiState.update {
-                it.copy(mensaje = "La lista de compras no es válida")
+            if (listId <= 0) {
+                _events.trySend(
+                    AddProductEvent.ShowMessage("La lista de compras no es válida")
+                )
+                return
             }
-            return
-        }
 
-        val estado = _uiState.value
+            val currentState = _uiState.value
+            _uiState.update { it.copy(isSaving = true) }
+            currentState
+        }
 
         viewModelScope.launch {
             try {
                 val productId = productRepository.insertProduct(
                     ProductEntity(
-                        name = estado.nombre.trim()
+                        name = estado.nombre.trim(),
+                        photoUri = estado.photoUri
                     )
                 )
 
@@ -144,19 +168,19 @@ class AddProductViewModel @Inject constructor(
                 )
 
                 limpiarFormulario()
-                onSuccess()
+                _events.send(AddProductEvent.NavigateBack)
 
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        mensaje = "No se pudo guardar el producto"
-                    )
-                }
+                _events.send(
+                    AddProductEvent.ShowMessage("No se pudo guardar el producto")
+                )
+            } finally {
+                _uiState.update { it.copy(isSaving = false) }
             }
         }
     }
 
     fun limpiarFormulario() {
-        _uiState.value = AddProductUiState()
+        _uiState.update { AddProductUiState(isSaving = it.isSaving) }
     }
 }

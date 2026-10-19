@@ -3,21 +3,23 @@ package com.example.nexusnote.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavType
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.nexusnote.ui.screens.home.HomeScreen
+import androidx.compose.material3.SnackbarHostState
 import com.example.nexusnote.ui.screens.lists.ListsScreen
 import com.example.nexusnote.ui.screens.create.CreateListScreen
 import com.example.nexusnote.ui.addProduct.AddProductScreen
 import com.example.nexusnote.ui.addProduct.AddProductViewModel
+import com.example.nexusnote.ui.addProduct.AddProductEvent
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailScreen
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
-import com.example.nexusnote.viewmodel.HomeViewModel
 import com.example.nexusnote.viewmodel.ListsViewModel
 import com.example.nexusnote.viewmodel.CreateListViewModel
 
@@ -28,33 +30,11 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Routes.LISTS
+        startDestination = Routes.HOME
     ) {
 
-        // PANTALLA DE INICIO
+        // Pantalla principal: muestra y administra las listas de compras.
         composable(Routes.HOME) {
-
-            val homeViewModel: HomeViewModel = hiltViewModel()
-
-            val uiState by homeViewModel.uiState
-                .collectAsStateWithLifecycle()
-
-            HomeScreen(
-                uiState = uiState,
-                onCreateListClick = {
-                    navController.navigate(Routes.CREATE_LIST)
-                },
-                onListClick = { listId ->
-                    navController.navigate(
-                        Routes.shoppingDetail(listId)
-                    )
-                }
-            )
-        }
-
-        // PANTALLA DE LISTAS
-        composable(Routes.LISTS) {
-
             val listsViewModel: ListsViewModel = hiltViewModel()
 
             val uiState by listsViewModel.uiState
@@ -63,13 +43,13 @@ fun AppNavigation() {
             ListsScreen(
                 uiState = uiState,
                 onOpenList = { listId ->
-                    navController.navigate(
+                    navController.navigateSingleTop(
                         Routes.shoppingDetail(listId)
                     )
                 },
                 onDeleteList = listsViewModel::deleteList,
                 onCreateClick = {
-                    navController.navigate(Routes.CREATE_LIST)
+                    navController.navigateSingleTop(Routes.CREATE_LIST)
                 },
                 onRetryClick = listsViewModel::retry
             )
@@ -88,7 +68,10 @@ fun AppNavigation() {
                     navController.navigate(
                         Routes.shoppingDetail(listId)
                     ) {
-                        popUpTo(Routes.HOME)
+                        popUpTo(Routes.HOME) {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
                     }
                 }
             }
@@ -96,6 +79,7 @@ fun AppNavigation() {
             CreateListScreen(
                 uiState = uiState,
                 onNameChange = createListViewModel::onNameChange,
+                onIconChange = createListViewModel::onIconChange,
                 onCreateClick = createListViewModel::createList,
                 onBackClick = {
                     navController.popBackStack()
@@ -113,8 +97,11 @@ fun AppNavigation() {
             )
         ) { backStackEntry ->
 
-            val listId = backStackEntry.arguments
-                ?.getInt(Routes.LIST_ID) ?: 0
+            val listId = requireNotNull(
+                backStackEntry.arguments
+                    ?.takeIf { it.containsKey(Routes.LIST_ID) }
+                    ?.getInt(Routes.LIST_ID)
+            ) { "Falta el argumento obligatorio '${Routes.LIST_ID}'" }
 
             val detailViewModel: ShoppingDetailViewModel =
                 hiltViewModel(backStackEntry)
@@ -131,7 +118,7 @@ fun AppNavigation() {
                     navController.popBackStack()
                 },
                 onAddProduct = {
-                    navController.navigate(
+                    navController.navigateSingleTop(
                         Routes.addProduct(listId)
                     )
                 },
@@ -151,16 +138,34 @@ fun AppNavigation() {
             )
         ) { backStackEntry ->
 
-            val listId = backStackEntry.arguments
-                ?.getInt(Routes.LIST_ID) ?: 0
+            val listId = requireNotNull(
+                backStackEntry.arguments
+                    ?.takeIf { it.containsKey(Routes.LIST_ID) }
+                    ?.getInt(Routes.LIST_ID)
+            ) { "Falta el argumento obligatorio '${Routes.LIST_ID}'" }
 
             val addProductViewModel: AddProductViewModel =
                 hiltViewModel(backStackEntry)
             val addProductUiState by addProductViewModel.uiState
                 .collectAsStateWithLifecycle()
+            val snackbarHostState = remember { SnackbarHostState() }
+
+            LaunchedEffect(addProductViewModel, snackbarHostState) {
+                addProductViewModel.events.collect { event ->
+                    when (event) {
+                        is AddProductEvent.ShowMessage -> {
+                            snackbarHostState.showSnackbar(event.message)
+                        }
+                        AddProductEvent.NavigateBack -> {
+                            navController.popBackStack()
+                        }
+                    }
+                }
+            }
 
             AddProductScreen(
                 uiState = addProductUiState,
+                snackbarHostState = snackbarHostState,
                 onBackClick = {
                     navController.popBackStack()
                 },
@@ -169,15 +174,16 @@ fun AppNavigation() {
                 onDisminuirCantidad = addProductViewModel::disminuirCantidad,
                 onUnidadChange = addProductViewModel::seleccionarUnidad,
                 onImagenChange = addProductViewModel::seleccionarImagen,
-                onAddProduct = {
-                    addProductViewModel.guardarProducto(
-                        listId = listId,
-                        onSuccess = {
-                            navController.popBackStack()
-                        }
-                    )
-                }
+                onPhotoUriChange = addProductViewModel::seleccionarFoto,
+                onImageError = addProductViewModel::reportarErrorImagen,
+                onAddProduct = { addProductViewModel.guardarProducto(listId) }
             )
         }
+    }
+}
+
+private fun NavHostController.navigateSingleTop(route: String) {
+    navigate(route) {
+        launchSingleTop = true
     }
 }

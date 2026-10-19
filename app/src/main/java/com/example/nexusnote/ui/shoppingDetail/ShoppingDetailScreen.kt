@@ -2,6 +2,7 @@ package com.example.nexusnote.ui.shoppingDetail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,8 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,11 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
-
-private val Green = Color(0xFF11A34A)
-private val LightBackground = Color(0xFFEFFCF3)
-private val GrayText = Color(0xFF94A3B8)
-private val DarkText = Color(0xFF101827)
+import java.io.File
+import android.net.Uri
+import com.example.nexusnote.ui.addProduct.ProductImageReference
 
 @Composable
 fun ShoppingDetailScreen(
@@ -62,7 +61,7 @@ private fun ShoppingDetailContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         // Encabezado verde
@@ -70,7 +69,7 @@ private fun ShoppingDetailContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    color = Green,
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(
                         bottomStart = 28.dp,
                         bottomEnd = 28.dp
@@ -91,21 +90,21 @@ private fun ShoppingDetailContent(
                         imageVector =
                             Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Volver",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
 
                 Column {
                     Text(
                         text = "🛒 ${uiState.listName}",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
                         text = uiState.dateLabel,
-                        color = Color.White.copy(alpha = 0.75f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                 }
@@ -120,13 +119,13 @@ private fun ShoppingDetailContent(
                 Text(
                     text = "${uiState.purchasedCount} de " +
                             "${uiState.totalCount} comprados",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp
                 )
 
                 Text(
                     text = "${uiState.percentage}%",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -139,8 +138,8 @@ private fun ShoppingDetailContent(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(8.dp)),
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.3f)
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surface
             )
         }
 
@@ -154,7 +153,7 @@ private fun ShoppingDetailContent(
                 uiState.isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
-                        color = Green
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -170,12 +169,12 @@ private fun ShoppingDetailContent(
                         Text(
                             text = "No se pudieron cargar los productos",
                             fontWeight = FontWeight.Bold,
-                            color = DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Text(
                             text = uiState.errorMessage,
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     }
@@ -198,13 +197,13 @@ private fun ShoppingDetailContent(
                             text = "Tu lista está vacía",
                             fontSize = 19.sp,
                             fontWeight = FontWeight.Bold,
-                            color = DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Text(
                             text = "Todavía no hay productos. " +
                                     "Puedes agregar el primero.",
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     }
@@ -300,7 +299,8 @@ private fun ShoppingDetailContent(
                 )
                 .height(55.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Green
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -317,7 +317,7 @@ private fun ShoppingDetailContent(
 private fun SectionTitle(title: String) {
     Text(
         text = title,
-        color = GrayText,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontSize = 13.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(
@@ -339,12 +339,31 @@ private fun ProductPhoto(
         modifier = Modifier
             .size(49.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF1F5F9)),
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        if (!product.photoUri.isNullOrBlank() && !imageFailed) {
+        val drawableResource = ProductImageReference
+            .drawableResourceId(product.photoUri)
+        val storedImage = product.photoUri
+        val imageModel = when {
+            storedImage.isNullOrBlank() ||
+                    ProductImageReference.isResourceReference(storedImage) -> null
+            storedImage.startsWith('/') -> File(storedImage)
+            storedImage.startsWith("content://") ||
+                    storedImage.startsWith("file://") -> Uri.parse(storedImage)
+            else -> null
+        }
+
+        if (drawableResource != null) {
+            Image(
+                painter = painterResource(drawableResource),
+                contentDescription = "Imagen predeterminada de ${product.name}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else if (imageModel != null && !imageFailed) {
             AsyncImage(
-                model = product.photoUri,
+                model = imageModel,
                 contentDescription = "Foto de ${product.name}",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
@@ -374,9 +393,13 @@ private fun ProductCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(17.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
         )
     ) {
         Row(
@@ -398,13 +421,13 @@ private fun ProductCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Green, CircleShape),
+                            .background(MaterialTheme.colorScheme.primary, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Comprado",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 } else {
@@ -430,9 +453,9 @@ private fun ProductCard(
                 Text(
                     text = product.name,
                     color = if (product.purchased) {
-                        GrayText
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
-                        DarkText
+                        MaterialTheme.colorScheme.onSurface
                     },
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
@@ -445,7 +468,7 @@ private fun ProductCard(
 
                 Text(
                     text = "${product.quantity} ${product.unit}",
-                    color = GrayText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
             }
@@ -453,13 +476,13 @@ private fun ProductCard(
             if (product.purchased) {
                 Text(
                     text = "✓ Listo",
-                    color = Green,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 12.sp
                 )
             } else {
                 Text(
                     text = "Pendiente",
-                    color = GrayText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp
                 )
             }
@@ -473,7 +496,7 @@ private fun ProductCard(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Opciones del producto",
-                        tint = GrayText
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 

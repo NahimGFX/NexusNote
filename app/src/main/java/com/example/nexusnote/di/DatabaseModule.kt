@@ -2,6 +2,8 @@ package com.example.nexusnote.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.nexusnote.data.local.dao.ProductDao
 import com.example.nexusnote.data.local.dao.ShoppingListDao
 import com.example.nexusnote.data.local.dao.ShoppingListItemDao
@@ -12,6 +14,14 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+
+private val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE shopping_lists ADD COLUMN icon TEXT NOT NULL DEFAULT '🛒'"
+        )
+    }
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -26,7 +36,9 @@ object DatabaseModule {
             context,
             NexusNoteDatabase::class.java,
             "nexusnote_database"
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     @Provides

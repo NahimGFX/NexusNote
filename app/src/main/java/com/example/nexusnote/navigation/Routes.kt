@@ -3,7 +3,7 @@ package com.example.nexusnote.navigation
 object Routes {
     const val HOME = "home"
 
-    const val LISTS = "lists"
+    const val LISTS = HOME // Alias compatible con la pantalla principal de listas.
     const val CREATE_LIST = "create_list"
     const val SHOPPING_DETAIL = "shopping_detail"
     const val ADD_PRODUCT = "add_product"

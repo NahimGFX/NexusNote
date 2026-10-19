@@ -12,7 +12,11 @@ import com.example.nexusnote.data.repository.OfflineShoppingListItemRepository
 import com.example.nexusnote.data.repository.OfflineShoppingListRepository
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,9 +29,11 @@ class ShoppingDetailViewModelTest {
 
     private lateinit var database: NexusNoteDatabase
     private lateinit var viewModel: ShoppingDetailViewModel
+    private lateinit var productRepository: OfflineProductRepository
 
     private var listId = 0
     private var itemId = 0
+    private var productId = 0
 
     @Before
     fun setup() = runBlocking {
@@ -43,7 +49,7 @@ class ShoppingDetailViewModelTest {
             database.shoppingListDao()
         )
 
-        val productRepository = OfflineProductRepository(
+        productRepository = OfflineProductRepository(
             database.productDao()
         )
 
@@ -53,7 +59,7 @@ class ShoppingDetailViewModelTest {
 
         listId = listRepository.insertList("Compras de prueba")
 
-        val productId = productRepository.insertProduct(
+        productId = productRepository.insertProduct(
             ProductEntity(name = "Leche entera")
         )
 
@@ -67,7 +73,6 @@ class ShoppingDetailViewModelTest {
 
         viewModel = ShoppingDetailViewModel(
             itemRepository = itemRepository,
-            productRepository = productRepository,
             listRepository = listRepository
         )
 
@@ -111,6 +116,59 @@ class ShoppingDetailViewModelTest {
             "Compras de prueba",
             viewModel.uiState.value.listName
         )
+    }
+
+    @Test
+    fun fechaDelDetalleReflejaLaFechaGuardadaEnRoom() = runBlocking {
+        val storedList = database.shoppingListDao()
+            .getListById(listId)
+            .first()!!
+        database.shoppingListDao().updateList(
+            storedList.copy(createdAt = 0L)
+        )
+
+        val expectedDate = DateFormat
+            .getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
+            .format(Date(0L))
+
+        waitUntil {
+            viewModel.uiState.value.dateLabel == expectedDate
+        }
+
+        assertEquals(expectedDate, viewModel.uiState.value.dateLabel)
+    }
+
+    @Test
+    fun listaInexistenteNoMuestraUnaFechaFalsa() = runBlocking {
+        viewModel.loadList(Int.MAX_VALUE)
+
+        waitUntil {
+            !viewModel.uiState.value.isLoading &&
+                    viewModel.uiState.value.listName == "Lista no encontrada"
+        }
+
+        assertEquals("", viewModel.uiState.value.dateLabel)
+    }
+
+    @Test
+    fun actualizarProductoEnRoomActualizaElDetalleReactivo() = runBlocking {
+        productRepository.updateProduct(
+            ProductEntity(
+                id = productId,
+                name = "Leche deslactosada",
+                photoUri = "content://products/leche"
+            )
+        )
+
+        waitUntil {
+            val product = viewModel.uiState.value.products.firstOrNull()
+            product?.name == "Leche deslactosada" &&
+                    product.photoUri == "content://products/leche"
+        }
+
+        val product = viewModel.uiState.value.products.single()
+        assertEquals("Leche deslactosada", product.name)
+        assertEquals("content://products/leche", product.photoUri)
     }
 
     @Test

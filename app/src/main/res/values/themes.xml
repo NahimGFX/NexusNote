@@ -2,4 +2,12 @@
 <resources>
 
     <style name="Theme.NexusNote" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.NexusNote.Starting" parent="Theme.SplashScreen">
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_shopping_list</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
+        <item name="postSplashScreenTheme">@style/Theme.NexusNote</item>
+    </style>
 </resources>
