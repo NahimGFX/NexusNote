@@ -12,6 +12,7 @@ import com.example.nexusnote.data.repository.OfflineShoppingListItemRepository
 import com.example.nexusnote.data.repository.OfflineShoppingListRepository
 import com.example.nexusnote.ui.addProduct.AddProductEvent
 import com.example.nexusnote.ui.addProduct.AddProductViewModel
+import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
@@ -82,6 +83,42 @@ class AddProductViewModelTest {
         assertEquals(1, database.shoppingListItemDao().getItemsByList(listId).first().size)
         assertTrue(viewModel.uiState.value.nombre.isEmpty())
         assertTrue(!viewModel.uiState.value.isSaving)
+    }
+
+    @Test
+    fun referenciaDeImagenSePersisteYAlimentaElEstadoDelDetalle() = runBlocking {
+        val listId = listRepository.insertList("Compras con foto")
+        val imagePath = "/data/user/0/com.example.nexusnote/files/product_images/leche.jpg"
+        val itemRepository = OfflineShoppingListItemRepository(
+            database.shoppingListItemDao()
+        )
+        viewModel.actualizarNombre("Leche")
+        viewModel.seleccionarFoto(imagePath)
+        val nextEvent = async { viewModel.events.first() }
+
+        viewModel.guardarProducto(listId)
+
+        assertEquals(
+            AddProductEvent.NavigateBack,
+            withTimeout(2_000) { nextEvent.await() }
+        )
+        assertEquals(
+            imagePath,
+            database.productDao().getAllProducts().first().single().photoUri
+        )
+
+        val detailViewModel = ShoppingDetailViewModel(
+            itemRepository = itemRepository,
+            listRepository = listRepository
+        )
+        detailViewModel.loadList(listId)
+        val detailState = withTimeout(2_000) {
+            detailViewModel.uiState.first { state ->
+                state.products.any { product -> product.photoUri == imagePath }
+            }
+        }
+
+        assertEquals(imagePath, detailState.products.single().photoUri)
     }
 
     @Test

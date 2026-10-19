@@ -21,6 +21,7 @@ data class AddProductUiState(
     val cantidad: Int = 1,
     val unidad: String = "pzas",
     val imagenSeleccionada: String = "Sin foto",
+    val photoUri: String? = null,
     val errorNombre: String? = null,
     val isSaving: Boolean = false
 ) {
@@ -97,6 +98,18 @@ class AddProductViewModel @Inject constructor(
         }
     }
 
+    fun seleccionarFoto(photoUri: String?) {
+        _uiState.update {
+            it.copy(photoUri = photoUri)
+        }
+    }
+
+    fun reportarErrorImagen() {
+        _events.trySend(
+            AddProductEvent.ShowMessage("No se pudo guardar la imagen seleccionada")
+        )
+    }
+
     fun validarFormulario(): Boolean {
         val estado = _uiState.value
 
@@ -141,7 +154,8 @@ class AddProductViewModel @Inject constructor(
             try {
                 val productId = productRepository.insertProduct(
                     ProductEntity(
-                        name = estado.nombre.trim()
+                        name = estado.nombre.trim(),
+                        photoUri = estado.photoUri
                     )
                 )
 

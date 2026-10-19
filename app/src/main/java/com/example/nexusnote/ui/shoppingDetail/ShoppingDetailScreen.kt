@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
+import java.io.File
 
 @Composable
 fun ShoppingDetailScreen(
@@ -339,7 +340,9 @@ private fun ProductPhoto(
     ) {
         if (!product.photoUri.isNullOrBlank() && !imageFailed) {
             AsyncImage(
-                model = product.photoUri,
+                model = product.photoUri.let { storedImage ->
+                    if (storedImage.startsWith('/')) File(storedImage) else storedImage
+                },
                 contentDescription = "Foto de ${product.name}",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,

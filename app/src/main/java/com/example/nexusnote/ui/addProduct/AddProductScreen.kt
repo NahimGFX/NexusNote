@@ -1,8 +1,10 @@
 package com.example.nexusnote.ui.addProduct
 
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,16 +21,13 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +35,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nexusnote.R
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.runtime.rememberCoroutineScope
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
+import java.util.UUID
+import android.webkit.MimeTypeMap
 
 private val imagenesPredeterminadas = mapOf(
     "Frutas y verduras" to R.drawable.frutas_verduras,
@@ -49,6 +59,62 @@ private val categorias = listOf(
 )
 private val unidades = listOf("pzas", "kg", "g", "litros", "ml", "paquetes", "latas")
 
+private suspend fun copyUriToAppStorage(
+    context: Context,
+    sourceUri: Uri
+): String = withContext(Dispatchers.IO) {
+    val mimeType = context.contentResolver.getType(sourceUri)
+    val extension = MimeTypeMap.getSingleton()
+        .getExtensionFromMimeType(mimeType)
+        ?.takeIf { it.matches(Regex("[A-Za-z0-9]+")) }
+        ?: "img"
+
+    copyImageToAppStorage(context, extension) {
+        context.contentResolver.openInputStream(sourceUri)
+    }
+}
+
+private suspend fun copyFileToAppStorage(
+    context: Context,
+    sourceFile: File
+): String = withContext(Dispatchers.IO) {
+    copyImageToAppStorage(context, "jpg") {
+        sourceFile.inputStream()
+    }
+}
+
+private fun copyImageToAppStorage(
+    context: Context,
+    extension: String,
+    openSource: () -> java.io.InputStream?
+): String {
+    val imageDirectory = File(context.filesDir, "product_images")
+    if (!imageDirectory.exists() && !imageDirectory.mkdirs()) {
+        throw IOException("No se pudo crear el almacenamiento de imágenes")
+    }
+
+    val temporaryFile = File.createTempFile("product-", ".tmp", imageDirectory)
+    val durableFile = File(imageDirectory, "${UUID.randomUUID()}.$extension")
+    return try {
+        val input = openSource()
+            ?: throw IOException("No se pudo leer la imagen seleccionada")
+        input.use { source ->
+            temporaryFile.outputStream().buffered().use { destination ->
+                source.copyTo(destination)
+            }
+        }
+        if (!temporaryFile.renameTo(durableFile)) {
+            throw IOException("No se pudo guardar la imagen seleccionada")
+        }
+        durableFile.absolutePath
+    } catch (error: Exception) {
+        durableFile.delete()
+        throw error
+    } finally {
+        temporaryFile.delete()
+    }
+}
+
 @Composable
 fun AddProductScreen(
     uiState: AddProductUiState,
@@ -59,44 +125,65 @@ fun AddProductScreen(
     onDisminuirCantidad: () -> Unit,
     onUnidadChange: (String) -> Unit,
     onImagenChange: (String) -> Unit,
+    onPhotoUriChange: (String?) -> Unit = {},
+    onImageError: () -> Unit = {},
     onAddProduct: () -> Unit
 ) {
-    var imagenUri by remember { mutableStateOf<Uri?>(null) }
-    var fotoCamara by remember { mutableStateOf<Bitmap?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isImageProcessing by remember { mutableStateOf(false) }
+    var cameraTempPath by rememberSaveable { mutableStateOf<String?>(null) }
 
     val galeriaLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            imagenUri = uri
-            fotoCamara = null
-            onImagenChange("Galería")
+            isImageProcessing = true
+            scope.launch {
+                try {
+                    val durablePath = copyUriToAppStorage(context, uri)
+                    onImagenChange("Galería")
+                    onPhotoUriChange(durablePath)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    onImageError()
+                } finally {
+                    isImageProcessing = false
+                }
+            }
         }
     }
 
     val camaraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            fotoCamara = bitmap
-            imagenUri = null
-            onImagenChange("Cámara")
-        }
-    }
-
-    val context = LocalContext.current
-    val bitmapSeleccionado = remember(imagenUri) {
-        imagenUri?.let { uri ->
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+        contract = ActivityResultContracts.TakePicture()
+    ) { captured ->
+        val tempFile = cameraTempPath?.let(::File)
+        cameraTempPath = null
+        if (captured && tempFile != null) {
+            isImageProcessing = true
+            scope.launch {
+                try {
+                    val durablePath = copyFileToAppStorage(context, tempFile)
+                    onImagenChange("Cámara")
+                    onPhotoUriChange(durablePath)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    onImageError()
+                } finally {
+                    tempFile.delete()
+                    isImageProcessing = false
                 }
-            }.getOrNull()
+            }
+        } else {
+            tempFile?.delete()
         }
     }
 
     AddProductContent(
         uiState = uiState,
+        isImageProcessing = isImageProcessing,
         snackbarHostState = snackbarHostState,
         onBackClick = onBackClick,
         onNombreChange = onNombreChange,
@@ -105,13 +192,39 @@ fun AddProductScreen(
         onUnidadChange = onUnidadChange,
         onImagenChange = { categoria ->
             onImagenChange(categoria)
-            imagenUri = null
-            fotoCamara = null
+            if (categoria in categorias) {
+                onPhotoUriChange(null)
+            }
         },
-        onAbrirCamara = { camaraLauncher.launch(null) },
-        onAbrirGaleria = { galeriaLauncher.launch("image/*") },
-        fotoCamara = fotoCamara?.asImageBitmap(),
-        bitmapSeleccionado = bitmapSeleccionado,
+        onAbrirCamara = {
+            try {
+                val cameraDirectory = File(context.cacheDir, "camera_captures")
+                if (!cameraDirectory.exists() && !cameraDirectory.mkdirs()) {
+                    throw IOException("No se pudo preparar la captura de cámara")
+                }
+                val tempFile = File.createTempFile(
+                    "product-camera-",
+                    ".jpg",
+                    cameraDirectory
+                )
+                cameraTempPath = tempFile.absolutePath
+                val outputUri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    tempFile
+                )
+                camaraLauncher.launch(outputUri)
+            } catch (_: Exception) {
+                cameraTempPath?.let(::File)?.delete()
+                cameraTempPath = null
+                onImageError()
+            }
+        },
+        onAbrirGaleria = {
+            if (!isImageProcessing) {
+                galeriaLauncher.launch(arrayOf("image/*"))
+            }
+        },
         onAgregarProducto = onAddProduct
     )
 }
@@ -120,6 +233,7 @@ fun AddProductScreen(
 @Composable
 private fun AddProductContent(
     uiState: AddProductUiState,
+    isImageProcessing: Boolean,
     snackbarHostState: SnackbarHostState,
     onBackClick: () -> Unit,
     onNombreChange: (String) -> Unit,
@@ -129,12 +243,11 @@ private fun AddProductContent(
     onImagenChange: (String) -> Unit,
     onAbrirCamara: () -> Unit,
     onAbrirGaleria: () -> Unit,
-    fotoCamara: ImageBitmap?,
-    bitmapSeleccionado: ImageBitmap?,
     onAgregarProducto: () -> Unit
 ) {
     var menuExpandido by remember { mutableStateOf(false) }
     var mostrarSelectorImagen by remember { mutableStateOf(false) }
+    var imageLoadFailed by remember(uiState.photoUri) { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -172,7 +285,8 @@ private fun AddProductContent(
                     onClick = {
                         onAgregarProducto()
                     },
-                    enabled = uiState.formularioValido && !uiState.isSaving,
+                    enabled = uiState.formularioValido &&
+                            !uiState.isSaving && !isImageProcessing,
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
@@ -180,7 +294,7 @@ private fun AddProductContent(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    if (uiState.isSaving) {
+                    if (uiState.isSaving || isImageProcessing) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             color = MaterialTheme.colorScheme.onPrimary,
@@ -188,7 +302,14 @@ private fun AddProductContent(
                         )
                         Spacer(Modifier.width(10.dp))
                     }
-                    Text("Agregar producto", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (isImageProcessing && !uiState.isSaving) {
+                            "Preparando imagen..."
+                        } else {
+                            "Agregar producto"
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -215,20 +336,16 @@ private fun AddProductContent(
                 ) {
                     val imagenRecurso = imagenesPredeterminadas[uiState.imagenSeleccionada]
                     when {
-                        uiState.imagenSeleccionada == "Cámara" && fotoCamara != null -> {
-                            Image(
-                                bitmap = fotoCamara,
-                                contentDescription = "Fotografía tomada con la cámara",
+                        !uiState.photoUri.isNullOrBlank() && !imageLoadFailed -> {
+                            AsyncImage(
+                                model = File(uiState.photoUri),
+                                contentDescription = "Foto seleccionada del producto",
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                        uiState.imagenSeleccionada == "Galería" && bitmapSeleccionado != null -> {
-                            Image(
-                                bitmap = bitmapSeleccionado,
-                                contentDescription = "Imagen seleccionada de galería",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                onState = { state ->
+                                    imageLoadFailed =
+                                        state is AsyncImagePainter.State.Error
+                                }
                             )
                         }
                         imagenRecurso != null -> {

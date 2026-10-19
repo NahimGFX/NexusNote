@@ -174,6 +174,8 @@ fun AppNavigation() {
                 onDisminuirCantidad = addProductViewModel::disminuirCantidad,
                 onUnidadChange = addProductViewModel::seleccionarUnidad,
                 onImagenChange = addProductViewModel::seleccionarImagen,
+                onPhotoUriChange = addProductViewModel::seleccionarFoto,
+                onImageError = addProductViewModel::reportarErrorImagen,
                 onAddProduct = { addProductViewModel.guardarProducto(listId) }
             )
         }
