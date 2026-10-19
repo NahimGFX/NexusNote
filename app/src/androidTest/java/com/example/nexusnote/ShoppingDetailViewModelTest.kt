@@ -12,7 +12,11 @@ import com.example.nexusnote.data.repository.OfflineShoppingListItemRepository
 import com.example.nexusnote.data.repository.OfflineShoppingListRepository
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -112,6 +116,38 @@ class ShoppingDetailViewModelTest {
             "Compras de prueba",
             viewModel.uiState.value.listName
         )
+    }
+
+    @Test
+    fun fechaDelDetalleReflejaLaFechaGuardadaEnRoom() = runBlocking {
+        val storedList = database.shoppingListDao()
+            .getListById(listId)
+            .first()!!
+        database.shoppingListDao().updateList(
+            storedList.copy(createdAt = 0L)
+        )
+
+        val expectedDate = DateFormat
+            .getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
+            .format(Date(0L))
+
+        waitUntil {
+            viewModel.uiState.value.dateLabel == expectedDate
+        }
+
+        assertEquals(expectedDate, viewModel.uiState.value.dateLabel)
+    }
+
+    @Test
+    fun listaInexistenteNoMuestraUnaFechaFalsa() = runBlocking {
+        viewModel.loadList(Int.MAX_VALUE)
+
+        waitUntil {
+            !viewModel.uiState.value.isLoading &&
+                    viewModel.uiState.value.listName == "Lista no encontrada"
+        }
+
+        assertEquals("", viewModel.uiState.value.dateLabel)
     }
 
     @Test

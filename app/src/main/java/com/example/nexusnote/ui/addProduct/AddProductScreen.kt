@@ -172,7 +172,7 @@ private fun AddProductContent(
                     onClick = {
                         onAgregarProducto()
                     },
-                    enabled = uiState.formularioValido,
+                    enabled = uiState.formularioValido && !uiState.isSaving,
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
@@ -180,6 +180,14 @@ private fun AddProductContent(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
+                    if (uiState.isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(10.dp))
+                    }
                     Text("Agregar producto", fontWeight = FontWeight.Bold)
                 }
             }

@@ -6,6 +6,10 @@ import com.example.nexusnote.data.local.entity.ShoppingListItemEntity
 import com.example.nexusnote.data.repository.ShoppingListItemRepository
 import com.example.nexusnote.data.repository.ShoppingListRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.text.DateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,7 +63,10 @@ class ShoppingDetailViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             listName = list?.name
-                                ?: "Lista no encontrada"
+                                ?: "Lista no encontrada",
+                            dateLabel = list?.let {
+                                formatDate(it.createdAt)
+                            }.orEmpty()
                         )
                     }
                 }
@@ -167,5 +174,37 @@ class ShoppingDetailViewModel @Inject constructor(
                     ?: "Ocurrió un error al procesar la compra"
             )
         }
+    }
+
+    private fun formatDate(timestamp: Long): String {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val listDay = Calendar.getInstance().apply {
+            timeInMillis = timestamp
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val daysAgo = (
+            (today.timeInMillis - listDay.timeInMillis) / MILLIS_PER_DAY
+        ).toInt()
+
+        return when (daysAgo) {
+            0 -> "Hoy"
+            1 -> "Ayer"
+            in 2..6 -> "Hace $daysAgo días"
+            else -> DateFormat
+                .getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
+                .format(Date(timestamp))
+        }
+    }
+
+    private companion object {
+        const val MILLIS_PER_DAY = 86_400_000L
     }
 }

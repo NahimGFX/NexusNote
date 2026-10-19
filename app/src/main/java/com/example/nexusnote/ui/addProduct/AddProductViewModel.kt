@@ -21,7 +21,8 @@ data class AddProductUiState(
     val cantidad: Int = 1,
     val unidad: String = "pzas",
     val imagenSeleccionada: String = "Sin foto",
-    val errorNombre: String? = null
+    val errorNombre: String? = null,
+    val isSaving: Boolean = false
 ) {
     val formularioValido: Boolean
         get() = nombre.isNotBlank() && cantidad > 0
@@ -38,6 +39,7 @@ class AddProductViewModel @Inject constructor(
     private val shoppingListItemRepository: ShoppingListItemRepository
 ) : ViewModel() {
 
+    private val saveLock = Any()
 
     private val _uiState = MutableStateFlow(AddProductUiState())
 
@@ -119,16 +121,21 @@ class AddProductViewModel @Inject constructor(
 
 
     fun guardarProducto(listId: Int) {
-        if (!validarFormulario()) return
+        val estado = synchronized(saveLock) {
+            if (_uiState.value.isSaving) return
+            if (!validarFormulario()) return
 
-        if (listId <= 0) {
-            _events.trySend(
-                AddProductEvent.ShowMessage("La lista de compras no es válida")
-            )
-            return
+            if (listId <= 0) {
+                _events.trySend(
+                    AddProductEvent.ShowMessage("La lista de compras no es válida")
+                )
+                return
+            }
+
+            val currentState = _uiState.value
+            _uiState.update { it.copy(isSaving = true) }
+            currentState
         }
-
-        val estado = _uiState.value
 
         viewModelScope.launch {
             try {
@@ -153,11 +160,13 @@ class AddProductViewModel @Inject constructor(
                 _events.send(
                     AddProductEvent.ShowMessage("No se pudo guardar el producto")
                 )
+            } finally {
+                _uiState.update { it.copy(isSaving = false) }
             }
         }
     }
 
     fun limpiarFormulario() {
-        _uiState.value = AddProductUiState()
+        _uiState.update { AddProductUiState(isSaving = it.isSaving) }
     }
 }

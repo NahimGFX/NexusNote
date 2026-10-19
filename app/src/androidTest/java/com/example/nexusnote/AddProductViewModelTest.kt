@@ -5,12 +5,15 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.nexusnote.data.local.NexusNoteDatabase
+import com.example.nexusnote.data.local.entity.ProductEntity
+import com.example.nexusnote.data.repository.ProductRepository
 import com.example.nexusnote.data.repository.OfflineProductRepository
 import com.example.nexusnote.data.repository.OfflineShoppingListItemRepository
 import com.example.nexusnote.data.repository.OfflineShoppingListRepository
 import com.example.nexusnote.ui.addProduct.AddProductEvent
 import com.example.nexusnote.ui.addProduct.AddProductViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -20,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
 class AddProductViewModelTest {
@@ -77,5 +81,73 @@ class AddProductViewModelTest {
         assertEquals("Leche", database.productDao().getAllProducts().first().single().name)
         assertEquals(1, database.shoppingListItemDao().getItemsByList(listId).first().size)
         assertTrue(viewModel.uiState.value.nombre.isEmpty())
+        assertTrue(!viewModel.uiState.value.isSaving)
+    }
+
+    @Test
+    fun llamadasSimultaneasSoloInicianUnGuardado() = runBlocking {
+        val listId = listRepository.insertList("Compras")
+        val delegate = OfflineProductRepository(database.productDao())
+        val insertStarted = CompletableDeferred<Unit>()
+        val continueInsert = CompletableDeferred<Unit>()
+        val insertCalls = AtomicInteger()
+        val gatedProductRepository = object : ProductRepository by delegate {
+            override suspend fun insertProduct(product: ProductEntity): Int {
+                insertCalls.incrementAndGet()
+                insertStarted.complete(Unit)
+                continueInsert.await()
+                return delegate.insertProduct(product)
+            }
+        }
+        val guardedViewModel = AddProductViewModel(
+            productRepository = gatedProductRepository,
+            shoppingListItemRepository = OfflineShoppingListItemRepository(
+                database.shoppingListItemDao()
+            )
+        )
+        guardedViewModel.actualizarNombre("Leche")
+        val nextEvent = async { guardedViewModel.events.first() }
+
+        guardedViewModel.guardarProducto(listId)
+        withTimeout(2_000) { insertStarted.await() }
+        assertTrue(guardedViewModel.uiState.value.isSaving)
+
+        guardedViewModel.guardarProducto(listId)
+        assertEquals(1, insertCalls.get())
+
+        continueInsert.complete(Unit)
+        assertEquals(
+            AddProductEvent.NavigateBack,
+            withTimeout(2_000) { nextEvent.await() }
+        )
+        assertTrue(!guardedViewModel.uiState.value.isSaving)
+        assertEquals(1, database.productDao().getAllProducts().first().size)
+    }
+
+    @Test
+    fun errorDeGuardadoRestableceEstadoDeCarga() = runBlocking {
+        val listId = listRepository.insertList("Compras")
+        val failingProductRepository = object : ProductRepository by
+            OfflineProductRepository(database.productDao()) {
+            override suspend fun insertProduct(product: ProductEntity): Int {
+                throw IllegalStateException("Error de prueba")
+            }
+        }
+        val failingViewModel = AddProductViewModel(
+            productRepository = failingProductRepository,
+            shoppingListItemRepository = OfflineShoppingListItemRepository(
+                database.shoppingListItemDao()
+            )
+        )
+        failingViewModel.actualizarNombre("Leche")
+        val nextEvent = async { failingViewModel.events.first() }
+
+        failingViewModel.guardarProducto(listId)
+
+        assertEquals(
+            AddProductEvent.ShowMessage("No se pudo guardar el producto"),
+            withTimeout(2_000) { nextEvent.await() }
+        )
+        assertTrue(!failingViewModel.uiState.value.isSaving)
     }
 }
