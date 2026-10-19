@@ -3,6 +3,7 @@ package com.example.nexusnote.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nexusnote.data.repository.ShoppingListRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.DateFormat
 import java.util.Calendar
 import java.util.Date
@@ -13,8 +14,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ListsViewModel(
+@HiltViewModel
+class ListsViewModel @Inject constructor(
     private val repository: ShoppingListRepository
 ) : ViewModel() {
 

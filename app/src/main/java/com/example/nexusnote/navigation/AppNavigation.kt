@@ -3,16 +3,13 @@ package com.example.nexusnote.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.nexusnote.NexusNoteApplication
 import com.example.nexusnote.ui.screens.home.HomeScreen
 import com.example.nexusnote.ui.screens.lists.ListsScreen
 import com.example.nexusnote.ui.screens.create.CreateListScreen
@@ -20,21 +17,14 @@ import com.example.nexusnote.ui.addProduct.AddProductScreen
 import com.example.nexusnote.ui.addProduct.AddProductViewModel
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailScreen
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
-import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModelFactory
 import com.example.nexusnote.viewmodel.HomeViewModel
-import com.example.nexusnote.viewmodel.HomeViewModelFactory
 import com.example.nexusnote.viewmodel.ListsViewModel
-import com.example.nexusnote.viewmodel.ListsViewModelFactory
 import com.example.nexusnote.viewmodel.CreateListViewModel
-import com.example.nexusnote.viewmodel.CreateListViewModelFactory
 
 @Composable
 fun AppNavigation() {
 
     val navController = rememberNavController()
-    val context = LocalContext.current
-    val application =
-        context.applicationContext as NexusNoteApplication
 
     NavHost(
         navController = navController,
@@ -44,11 +34,7 @@ fun AppNavigation() {
         // PANTALLA DE INICIO
         composable(Routes.HOME) {
 
-            val homeViewModel: HomeViewModel = viewModel(
-                factory = HomeViewModelFactory(
-                    application.container.shoppingListRepository
-                )
-            )
+            val homeViewModel: HomeViewModel = hiltViewModel()
 
             val uiState by homeViewModel.uiState
                 .collectAsStateWithLifecycle()
@@ -69,11 +55,7 @@ fun AppNavigation() {
         // PANTALLA DE LISTAS
         composable(Routes.LISTS) {
 
-            val listsViewModel: ListsViewModel = viewModel(
-                factory = ListsViewModelFactory(
-                    application.container.shoppingListRepository
-                )
-            )
+            val listsViewModel: ListsViewModel = hiltViewModel()
 
             val uiState by listsViewModel.uiState
                 .collectAsStateWithLifecycle()
@@ -96,11 +78,7 @@ fun AppNavigation() {
         // PANTALLA PARA CREAR LISTAS
         composable(Routes.CREATE_LIST) {
 
-            val createListViewModel: CreateListViewModel = viewModel(
-                factory = CreateListViewModelFactory(
-                    application.container.shoppingListRepository
-                )
-            )
+            val createListViewModel: CreateListViewModel = hiltViewModel()
 
             val uiState by createListViewModel.uiState
                 .collectAsStateWithLifecycle()
@@ -138,20 +116,17 @@ fun AppNavigation() {
             val listId = backStackEntry.arguments
                 ?.getInt(Routes.LIST_ID) ?: 0
 
-            val detailViewModel: ShoppingDetailViewModel = viewModel(
-                viewModelStoreOwner = backStackEntry,
-                factory = ShoppingDetailViewModelFactory(
-                    itemRepository =
-                        application.container.shoppingListItemRepository,
-                    productRepository =
-                        application.container.productRepository,
-                    listRepository =
-                        application.container.shoppingListRepository
-                )
-            )
+            val detailViewModel: ShoppingDetailViewModel =
+                hiltViewModel(backStackEntry)
+            val detailUiState by detailViewModel.uiState
+                .collectAsStateWithLifecycle()
+
+            LaunchedEffect(detailViewModel, listId) {
+                detailViewModel.loadList(listId)
+            }
 
             ShoppingDetailScreen(
-                listId = listId,
+                uiState = detailUiState,
                 onBack = {
                     navController.popBackStack()
                 },
@@ -160,7 +135,9 @@ fun AppNavigation() {
                         Routes.addProduct(listId)
                     )
                 },
-                viewModel = detailViewModel
+                onToggleProduct = detailViewModel::togglePurchased,
+                onQuantityChange = detailViewModel::updateQuantity,
+                onDeleteProduct = detailViewModel::deleteProduct
             )
         }
 
@@ -178,14 +155,21 @@ fun AppNavigation() {
                 ?.getInt(Routes.LIST_ID) ?: 0
 
             val addProductViewModel: AddProductViewModel =
-                hiltViewModel()
+                hiltViewModel(backStackEntry)
+            val addProductUiState by addProductViewModel.uiState
+                .collectAsStateWithLifecycle()
 
             AddProductScreen(
-                viewModel = addProductViewModel,
+                uiState = addProductUiState,
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onAddProduct = { _, _, _ ->
+                onNombreChange = addProductViewModel::actualizarNombre,
+                onAumentarCantidad = addProductViewModel::aumentarCantidad,
+                onDisminuirCantidad = addProductViewModel::disminuirCantidad,
+                onUnidadChange = addProductViewModel::seleccionarUnidad,
+                onImagenChange = addProductViewModel::seleccionarImagen,
+                onAddProduct = {
                     addProductViewModel.guardarProducto(
                         listId = listId,
                         onSuccess = {

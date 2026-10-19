@@ -33,24 +33,20 @@ private val DarkText = Color(0xFF101827)
 
 @Composable
 fun ShoppingDetailScreen(
-    listId: Int,
+    uiState: ShoppingDetailUiState,
     onBack: () -> Unit = {},
     onAddProduct: () -> Unit = {},
-    viewModel: ShoppingDetailViewModel
+    onToggleProduct: (Int) -> Unit,
+    onQuantityChange: (Int, Int) -> Unit,
+    onDeleteProduct: (Int) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-
-    LaunchedEffect(listId, viewModel) {
-        viewModel.loadList(listId)
-    }
-
     ShoppingDetailContent(
         uiState = uiState,
         onBack = onBack,
         onAddProduct = onAddProduct,
-        onToggleProduct = viewModel::togglePurchased,
-        onQuantityChange = viewModel::updateQuantity,
-        onDeleteProduct = viewModel::deleteProduct
+        onToggleProduct = onToggleProduct,
+        onQuantityChange = onQuantityChange,
+        onDeleteProduct = onDeleteProduct
     )
 }
 
