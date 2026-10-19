@@ -1,5 +1,6 @@
 package com.example.nexusnote.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -32,5 +33,9 @@ data class ShoppingListItemEntity(
     val shoppingListId: Int,
     val productId: Int,
     val quantity: Int = 1,
-    val isPurchased: Boolean = false
+    val isPurchased: Boolean = false,
+    @ColumnInfo(defaultValue = "0")
+    val purchasedQuantity: Int = 0,
+    @ColumnInfo(defaultValue = "'unidades'")
+    val unit: String = "unidades"
 )

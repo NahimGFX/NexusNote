@@ -1,5 +1,8 @@
 package com.example.nexusnote.navigation
 
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.safeDrawingPadding
+import com.example.nexusnote.ui.home.HomeRoute
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,8 +36,16 @@ fun AppNavigation() {
         startDestination = Routes.HOME
     ) {
 
-        // Pantalla principal: muestra y administra las listas de compras.
+        // Inicio y gestión de listas usan destinos independientes.
         composable(Routes.HOME) {
+            HomeRoute(
+                onViewListsClick = { navController.navigateSingleTop(Routes.LISTS) },
+                onCreateListClick = { navController.navigateSingleTop(Routes.CREATE_LIST) },
+                modifier = Modifier.safeDrawingPadding()
+            )
+        }
+
+        composable(Routes.LISTS) {
             val listsViewModel: ListsViewModel = hiltViewModel()
 
             val uiState by listsViewModel.uiState
@@ -51,6 +62,7 @@ fun AppNavigation() {
                 onCreateClick = {
                     navController.navigateSingleTop(Routes.CREATE_LIST)
                 },
+                onBackClick = { navController.popBackStack() },
                 onRetryClick = listsViewModel::retry
             )
         }

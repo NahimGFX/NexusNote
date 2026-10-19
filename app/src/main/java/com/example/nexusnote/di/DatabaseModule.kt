@@ -23,6 +23,14 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+// Preserve compatibility with databases created by the previous local build.
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE shopping_list_items ADD COLUMN purchasedQuantity INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE shopping_list_items ADD COLUMN unit TEXT NOT NULL DEFAULT 'unidades'")
+        db.execSQL("UPDATE shopping_list_items SET purchasedQuantity = CASE WHEN isPurchased = 1 THEN quantity ELSE 0 END")
+    }
+}
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -37,7 +45,7 @@ object DatabaseModule {
             NexusNoteDatabase::class.java,
             "nexusnote_database"
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 
