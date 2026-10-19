@@ -1,6 +1,7 @@
 package com.example.nexusnote.ui.screens.lists
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -107,7 +108,8 @@ fun ListsScreen(
                     .height(50.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("＋   Nueva lista", fontWeight = FontWeight.SemiBold)
@@ -146,20 +148,19 @@ private fun ListsHeader(lists: List<ShoppingListUi>) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            .background(MaterialTheme.colorScheme.primary)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 18.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = "BIENVENIDA",
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "Mis Listas",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -168,7 +169,7 @@ private fun ListsHeader(lists: List<ShoppingListUi>) {
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f)),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) { Text("👋") }
         }
@@ -185,18 +186,18 @@ private fun StatPill(label: String, value: String, modifier: Modifier = Modifier
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f))
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
             label,
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall
         )
         Text(
             value,
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -212,19 +213,16 @@ private fun ShoppingListCard(
     val productCount = list.productCount.coerceAtLeast(0)
     val purchasedCount = list.purchasedCount.coerceIn(0, productCount)
     val progress = list.progressPercent.coerceIn(0, 100)
-    val categoryEmoji = when {
-        list.name.contains("desayuno", ignoreCase = true) -> "🥞"
-        list.name.contains("cumpleaños", ignoreCase = true) -> "🎂"
-        else -> "🛒"
-    }
+    val listEmoji = list.icon?.takeIf { it.isNotBlank() } ?: "🛒"
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenClick),
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -237,7 +235,7 @@ private fun ShoppingListCard(
                         .clip(RoundedCornerShape(13.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
-                ) { Text(categoryEmoji, style = MaterialTheme.typography.titleLarge) }
+                ) { Text(listEmoji, style = MaterialTheme.typography.titleLarge) }
 
                 Column(
                     modifier = Modifier.weight(1f).padding(start = 10.dp),
@@ -273,23 +271,15 @@ private fun ShoppingListCard(
                     )
                     Text(
                         "$progress%",
-                        color = if (progress in 1..99) {
-                            MaterialTheme.colorScheme.secondary
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
+                        color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 LinearProgressIndicator(
-                    progress = progress / 100f,
+                    progress = { progress / 100f },
                     modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
-                    color = if (progress in 1..99) {
-                        MaterialTheme.colorScheme.secondary
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
+                    color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
                 if (list.productPreviewEmojis.isNotEmpty()) {

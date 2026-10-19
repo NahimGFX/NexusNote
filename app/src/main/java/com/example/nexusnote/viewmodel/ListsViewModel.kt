@@ -64,6 +64,7 @@ class ListsViewModel @Inject constructor(
                                 id = summary.id,
                                 name = summary.name,
                                 dateLabel = formatDate(summary.createdAt),
+                                icon = summary.icon,
                                 purchasedCount = summary.purchasedCount,
                                 productCount = summary.productCount
                             )

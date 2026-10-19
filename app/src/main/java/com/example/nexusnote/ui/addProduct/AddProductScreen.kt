@@ -37,10 +37,6 @@ import androidx.compose.ui.unit.sp
 import com.example.nexusnote.R
 import androidx.compose.ui.text.TextStyle
 
-private val VerdeFondo = Color(0xFFF0FFF5)
-private val VerdePrincipal = Color(0xFF00A651)
-private val AzulTexto = Color(0xFF607D8B)
-
 private val imagenesPredeterminadas = mapOf(
     "Frutas y verduras" to R.drawable.frutas_verduras,
     "Lácteos" to R.drawable.lacteos,
@@ -56,6 +52,7 @@ private val unidades = listOf("pzas", "kg", "g", "litros", "ml", "paquetes", "la
 @Composable
 fun AddProductScreen(
     uiState: AddProductUiState,
+    snackbarHostState: SnackbarHostState,
     onBackClick: () -> Unit = {},
     onNombreChange: (String) -> Unit,
     onAumentarCantidad: () -> Unit,
@@ -100,6 +97,7 @@ fun AddProductScreen(
 
     AddProductContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onBackClick = onBackClick,
         onNombreChange = onNombreChange,
         onAumentarCantidad = onAumentarCantidad,
@@ -122,6 +120,7 @@ fun AddProductScreen(
 @Composable
 private fun AddProductContent(
     uiState: AddProductUiState,
+    snackbarHostState: SnackbarHostState,
     onBackClick: () -> Unit,
     onNombreChange: (String) -> Unit,
     onAumentarCantidad: () -> Unit,
@@ -138,30 +137,48 @@ private fun AddProductContent(
     var mostrarSelectorImagen by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = VerdeFondo,
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Agregar producto", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
+                    Text(
+                        "Agregar producto",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar", tint = Color.Black)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
         bottomBar = {
-            Surface(color = Color.White, shadowElevation = 6.dp) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 6.dp
+            ) {
                 Button(
                     onClick = {
                         onAgregarProducto()
                     },
                     enabled = uiState.formularioValido,
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = VerdePrincipal, contentColor = Color.Black)
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
                     Text("Agregar producto", fontWeight = FontWeight.Bold)
                 }
@@ -185,7 +202,7 @@ private fun AddProductContent(
                     modifier = Modifier
                         .size(90.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFFF5F5F7)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     val imagenRecurso = imagenesPredeterminadas[uiState.imagenSeleccionada]
@@ -219,10 +236,14 @@ private fun AddProductContent(
                                 Icon(
                                     Icons.Default.ShoppingCart,
                                     contentDescription = "Sin foto",
-                                    tint = Color.Gray,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(35.dp)
                                 )
-                                Text("Sin foto", fontSize = 11.sp, color = Color.LightGray)
+                                Text(
+                                    "Sin foto",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
@@ -233,9 +254,16 @@ private fun AddProductContent(
                         .align(Alignment.TopCenter)
                         .offset(x = 38.dp, y = 72.dp)
                         .size(38.dp)
-                        .background(VerdePrincipal, RoundedCornerShape(12.dp))
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(12.dp)
+                        )
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = "Seleccionar imagen", tint = Color.White)
+                    Icon(
+                        Icons.Default.CameraAlt,
+                        contentDescription = "Seleccionar imagen",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
 
@@ -244,14 +272,20 @@ private fun AddProductContent(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant
+                    )
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             "SELECCIONAR IMAGEN",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = AzulTexto
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -266,7 +300,11 @@ private fun AddProductContent(
                             ) { Text("Galería", fontSize = 12.sp) }
                         }
                         Spacer(Modifier.height(12.dp))
-                        Text("O elige una imagen de muestra:", fontSize = 11.sp, color = Color.Gray)
+                            Text(
+                                "O elige una imagen de muestra:",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         Spacer(Modifier.height(10.dp))
 
                         categorias.chunked(3).forEach { fila ->
@@ -283,10 +321,17 @@ private fun AddProductContent(
                                         },
                                         modifier = Modifier.weight(1f).height(90.dp),
                                         shape = RoundedCornerShape(12.dp),
-                                        border = if (seleccionada) BorderStroke(2.dp, VerdePrincipal) else null,
+                                        border = if (seleccionada) {
+                                            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                        } else {
+                                            null
+                                        },
                                         colors = CardDefaults.cardColors(
-                                            containerColor = if (seleccionada) Color(0xFFE0F7E9)
-                                            else Color(0xFFF5F5F5)
+                                            containerColor = if (seleccionada) {
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceVariant
+                                            }
                                         )
                                     ) {
                                         Box(
@@ -305,14 +350,18 @@ private fun AddProductContent(
                                                 Icon(
                                                     Icons.Default.ShoppingCart,
                                                     contentDescription = "Sin foto",
-                                                    tint = Color.Gray,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     modifier = Modifier.align(Alignment.Center).size(30.dp)
                                                 )
                                             }
                                             Text(
                                                 text = categoria,
                                                 fontSize = 10.sp,
-                                                color = if (imagen != null) Color.White else Color.DarkGray,
+                                                color = if (imagen != null) {
+                                                    MaterialTheme.colorScheme.onPrimary
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                },
                                                 textAlign = TextAlign.Center,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -337,22 +386,27 @@ private fun AddProductContent(
                 "NOMBRE DEL PRODUCTO",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = AzulTexto,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = uiState.nombre,
                 onValueChange = onNombreChange,
-                textStyle = TextStyle(color = Color.Black),
+                textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
                 placeholder = { Text("Ej: Leche entera...") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = VerdePrincipal,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
             uiState.errorNombre?.let { error ->
@@ -368,7 +422,7 @@ private fun AddProductContent(
                 "CANTIDAD",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = AzulTexto,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
@@ -381,8 +435,15 @@ private fun AddProductContent(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp)
-                        .background(Color.White, RoundedCornerShape(14.dp))
-                        .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(14.dp)),
+                        .background(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.shapes.medium
+                        )
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outline,
+                            MaterialTheme.shapes.medium
+                        ),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -401,17 +462,25 @@ private fun AddProductContent(
                 ) {
                     OutlinedTextField(
                         value = uiState.unidad,
-                        textStyle = TextStyle(color = Color.Black),
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
                         onValueChange = {},
                         readOnly = true,
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
-                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(
+                                ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                enabled = true
+                            ),
+                        shape = MaterialTheme.shapes.medium,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
                         )
                     )
                     ExposedDropdownMenu(

@@ -30,8 +30,15 @@ class CreateListViewModel @Inject constructor(
         }
     }
 
+    fun onIconChange(icon: String) {
+        _uiState.update {
+            it.copy(icon = icon)
+        }
+    }
+
     fun createList() {
         val name = _uiState.value.name.trim()
+        val icon = _uiState.value.icon
 
         if (name.isBlank()) {
             _uiState.update {
@@ -48,7 +55,7 @@ class CreateListViewModel @Inject constructor(
             }
 
             try {
-                val listId = repository.insertList(name)
+                val listId = repository.insertList(name, icon)
                 _events.send(listId)
 
                 _uiState.update {

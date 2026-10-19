@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+
+    <!-- All artwork stays inside the 160 dp safe circle of the splash icon. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M89,54h62c7.2,0 13,5.8 13,13v106c0,7.2 -5.8,13 -13,13H89c-7.2,0 -13,-5.8 -13,-13V67c0,-7.2 5.8,-13 13,-13z"
+        android:strokeColor="#FF2E7D32"
+        android:strokeLineJoin="round"
+        android:strokeWidth="7" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M96,62v-4c0,-5.5 4.5,-10 10,-10h28c5.5,0 10,4.5 10,10v4"
+        android:strokeColor="#FF2E7D32"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="7" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M91,91l7,7 12,-14M120,94h28M91,124l7,7 12,-14M120,127h28M91,157l7,7 12,-14M120,160h20"
+        android:strokeColor="#FF2E7D32"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="7" />
+</vector>

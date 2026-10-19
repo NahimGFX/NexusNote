@@ -3,7 +3,6 @@ package com.example.nexusnote.ui.shoppingDetail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nexusnote.data.local.entity.ShoppingListItemEntity
-import com.example.nexusnote.data.repository.ProductRepository
 import com.example.nexusnote.data.repository.ShoppingListItemRepository
 import com.example.nexusnote.data.repository.ShoppingListRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +19,6 @@ import javax.inject.Inject
 @HiltViewModel
 class ShoppingDetailViewModel @Inject constructor(
     private val itemRepository: ShoppingListItemRepository,
-    private val productRepository: ProductRepository,
     private val listRepository: ShoppingListRepository
 ) : ViewModel() {
 
@@ -69,37 +67,30 @@ class ShoppingDetailViewModel @Inject constructor(
 
         // Consultar sus productos desde Room
         loadJob = viewModelScope.launch {
-            itemRepository.getItemsByList(listId)
+            itemRepository.getItemsWithProductsByList(listId)
                 .catch { error ->
                     showError(error)
                 }
                 .collect { items ->
-                    try {
-                        val products = items.map { item ->
-                            val product = productRepository
-                                .getProductById(item.productId)
+                    val products = items.map { item ->
+                        ShoppingDetailProduct(
+                            id = item.itemId,
+                            name = item.productName
+                                ?: "Producto no disponible",
+                            quantity = item.quantity,
+                            unit = "unidades",
+                            emoji = "🛒",
+                            purchased = item.isPurchased,
+                            photoUri = item.photoUri
+                        )
+                    }
 
-                            ShoppingDetailProduct(
-                                id = item.id,
-                                name = product?.name
-                                    ?: "Producto no disponible",
-                                quantity = item.quantity,
-                                unit = "unidades",
-                                emoji = "🛒",
-                                purchased = item.isPurchased,
-                                photoUri = product?.photoUri
-                            )
-                        }
-
-                        _uiState.update {
-                            it.copy(
-                                products = products,
-                                isLoading = false,
-                                errorMessage = null
-                            )
-                        }
-                    } catch (error: Exception) {
-                        showError(error)
+                    _uiState.update {
+                        it.copy(
+                            products = products,
+                            isLoading = false,
+                            errorMessage = null
+                        )
                     }
                 }
         }

@@ -7,7 +7,8 @@ data class ShoppingListUi(
     val purchasedCount: Int,
     val productCount: Int,
 
-    val productPreviewEmojis: List<String> = emptyList()
+    val productPreviewEmojis: List<String> = emptyList(),
+    val icon: String? = null
 ) {
     val progressPercent: Int
         get() = if (productCount <= 0) 0
