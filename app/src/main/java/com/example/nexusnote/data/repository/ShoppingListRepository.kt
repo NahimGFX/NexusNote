@@ -4,6 +4,7 @@ import com.example.nexusnote.data.local.dao.ShoppingListDao
 import com.example.nexusnote.data.local.entity.ShoppingListEntity
 import com.example.nexusnote.data.local.model.ShoppingListSummary
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
 interface ShoppingListRepository {
     fun getAllLists(): Flow<List<ShoppingListEntity>>
@@ -16,7 +17,7 @@ interface ShoppingListRepository {
     suspend fun deleteListById(listId: Int)
 }
 
-class OfflineShoppingListRepository(
+class OfflineShoppingListRepository @Inject constructor(
     private val shoppingListDao: ShoppingListDao
 ) : ShoppingListRepository {
 

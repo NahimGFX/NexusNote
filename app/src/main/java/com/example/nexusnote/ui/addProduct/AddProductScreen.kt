@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nexusnote.R
 import androidx.compose.ui.text.TextStyle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private val VerdeFondo = Color(0xFFF0FFF5)
 private val VerdePrincipal = Color(0xFF00A651)
@@ -56,11 +55,15 @@ private val unidades = listOf("pzas", "kg", "g", "litros", "ml", "paquetes", "la
 
 @Composable
 fun AddProductScreen(
-    viewModel: AddProductViewModel,
+    uiState: AddProductUiState,
     onBackClick: () -> Unit = {},
-    onAddProduct: (String, Int, String) -> Unit = { _, _, _ -> }
+    onNombreChange: (String) -> Unit,
+    onAumentarCantidad: () -> Unit,
+    onDisminuirCantidad: () -> Unit,
+    onUnidadChange: (String) -> Unit,
+    onImagenChange: (String) -> Unit,
+    onAddProduct: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var imagenUri by remember { mutableStateOf<Uri?>(null) }
     var fotoCamara by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -70,7 +73,7 @@ fun AddProductScreen(
         if (uri != null) {
             imagenUri = uri
             fotoCamara = null
-            viewModel.seleccionarImagen("Galería")
+            onImagenChange("Galería")
         }
     }
 
@@ -80,7 +83,7 @@ fun AddProductScreen(
         if (bitmap != null) {
             fotoCamara = bitmap
             imagenUri = null
-            viewModel.seleccionarImagen("Cámara")
+            onImagenChange("Cámara")
         }
     }
 
@@ -98,12 +101,12 @@ fun AddProductScreen(
     AddProductContent(
         uiState = uiState,
         onBackClick = onBackClick,
-        onNombreChange = viewModel::actualizarNombre,
-        onAumentarCantidad = viewModel::aumentarCantidad,
-        onDisminuirCantidad = viewModel::disminuirCantidad,
-        onUnidadChange = viewModel::seleccionarUnidad,
+        onNombreChange = onNombreChange,
+        onAumentarCantidad = onAumentarCantidad,
+        onDisminuirCantidad = onDisminuirCantidad,
+        onUnidadChange = onUnidadChange,
         onImagenChange = { categoria ->
-            viewModel.seleccionarImagen(categoria)
+            onImagenChange(categoria)
             imagenUri = null
             fotoCamara = null
         },
@@ -111,11 +114,7 @@ fun AddProductScreen(
         onAbrirGaleria = { galeriaLauncher.launch("image/*") },
         fotoCamara = fotoCamara?.asImageBitmap(),
         bitmapSeleccionado = bitmapSeleccionado,
-        onAgregarProducto = {
-            if (viewModel.validarFormulario()) {
-                onAddProduct(uiState.nombre.trim(), uiState.cantidad, uiState.unidad)
-            }
-        }
+        onAgregarProducto = onAddProduct
     )
 }
 

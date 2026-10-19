@@ -2,13 +2,10 @@ package com.example.nexusnote.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.nexusnote.data.local.dao.ProductDao
+import com.example.nexusnote.data.local.dao.ShoppingListDao
+import com.example.nexusnote.data.local.dao.ShoppingListItemDao
 import com.example.nexusnote.data.local.NexusNoteDatabase
-import com.example.nexusnote.data.repository.OfflineProductRepository
-import com.example.nexusnote.data.repository.OfflineShoppingListItemRepository
-import com.example.nexusnote.data.repository.OfflineShoppingListRepository
-import com.example.nexusnote.data.repository.ProductRepository
-import com.example.nexusnote.data.repository.ShoppingListItemRepository
-import com.example.nexusnote.data.repository.ShoppingListRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,27 +30,17 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideProductRepository(
+    fun provideShoppingListDao(
         database: NexusNoteDatabase
-    ): ProductRepository {
-        return OfflineProductRepository(database.productDao())
-    }
+    ): ShoppingListDao = database.shoppingListDao()
 
     @Provides
-    fun provideShoppingListItemRepository(
+    fun provideProductDao(
         database: NexusNoteDatabase
-    ): ShoppingListItemRepository {
-        return OfflineShoppingListItemRepository(
-            database.shoppingListItemDao()
-        )
-    }
+    ): ProductDao = database.productDao()
 
     @Provides
-    fun provideShoppingListRepository(
+    fun provideShoppingListItemDao(
         database: NexusNoteDatabase
-    ): ShoppingListRepository {
-        return OfflineShoppingListRepository(
-            database.shoppingListDao()
-        )
-    }
+    ): ShoppingListItemDao = database.shoppingListItemDao()
 }
