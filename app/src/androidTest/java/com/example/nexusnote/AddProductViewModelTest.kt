@@ -12,6 +12,7 @@ import com.example.nexusnote.data.repository.OfflineShoppingListItemRepository
 import com.example.nexusnote.data.repository.OfflineShoppingListRepository
 import com.example.nexusnote.ui.addProduct.AddProductEvent
 import com.example.nexusnote.ui.addProduct.AddProductViewModel
+import com.example.nexusnote.ui.addProduct.ProductImageReference
 import com.example.nexusnote.ui.shoppingDetail.ShoppingDetailViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CompletableDeferred
@@ -119,6 +120,49 @@ class AddProductViewModelTest {
         }
 
         assertEquals(imagePath, detailState.products.single().photoUri)
+    }
+
+    @Test
+    fun imagenPredeterminadaSePersisteYSeResuelveComoDrawable() = runBlocking {
+        val listId = listRepository.insertList("Compras con imagen predeterminada")
+        val defaultImage = ProductImageReference.forCategory("Carnes")!!
+        val itemRepository = OfflineShoppingListItemRepository(
+            database.shoppingListItemDao()
+        )
+        viewModel.actualizarNombre("Carne molida")
+        viewModel.seleccionarImagen("Carnes")
+        viewModel.seleccionarFoto(defaultImage.reference)
+        val nextEvent = async { viewModel.events.first() }
+
+        viewModel.guardarProducto(listId)
+
+        assertEquals(
+            AddProductEvent.NavigateBack,
+            withTimeout(2_000) { nextEvent.await() }
+        )
+        val storedPhotoReference = database.productDao()
+            .getAllProducts()
+            .first()
+            .single()
+            .photoUri
+        assertEquals(defaultImage.reference, storedPhotoReference)
+
+        val detailViewModel = ShoppingDetailViewModel(
+            itemRepository = itemRepository,
+            listRepository = listRepository
+        )
+        detailViewModel.loadList(listId)
+        val detailProduct = withTimeout(2_000) {
+            detailViewModel.uiState.first { state ->
+                state.products.any { product -> product.photoUri == defaultImage.reference }
+            }.products.single()
+        }
+
+        assertEquals(defaultImage.reference, detailProduct.photoUri)
+        assertEquals(
+            R.drawable.carnes,
+            ProductImageReference.drawableResourceId(detailProduct.photoUri)
+        )
     }
 
     @Test

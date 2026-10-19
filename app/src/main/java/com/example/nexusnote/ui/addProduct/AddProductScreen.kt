@@ -47,13 +47,6 @@ import java.io.IOException
 import java.util.UUID
 import android.webkit.MimeTypeMap
 
-private val imagenesPredeterminadas = mapOf(
-    "Frutas y verduras" to R.drawable.frutas_verduras,
-    "Lácteos" to R.drawable.lacteos,
-    "Panadería" to R.drawable.panaderia,
-    "Carnes" to R.drawable.carnes,
-    "Bebidas" to R.drawable.bebidas
-)
 private val categorias = listOf(
     "Frutas y verduras", "Lácteos", "Panadería", "Carnes", "Bebidas", "Sin foto"
 )
@@ -193,7 +186,9 @@ fun AddProductScreen(
         onImagenChange = { categoria ->
             onImagenChange(categoria)
             if (categoria in categorias) {
-                onPhotoUriChange(null)
+                onPhotoUriChange(
+                    ProductImageReference.referenceForCategory(categoria)
+                )
             }
         },
         onAbrirCamara = {
@@ -334,9 +329,23 @@ private fun AddProductContent(
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    val imagenRecurso = imagenesPredeterminadas[uiState.imagenSeleccionada]
+                    val imagenRecurso =
+                        ProductImageReference.drawableResourceId(uiState.photoUri)
+                            ?: ProductImageReference
+                                .forCategory(uiState.imagenSeleccionada)
+                                ?.drawableRes
                     when {
-                        !uiState.photoUri.isNullOrBlank() && !imageLoadFailed -> {
+                        imagenRecurso != null -> {
+                            Image(
+                                painter = painterResource(imagenRecurso),
+                                contentDescription = uiState.imagenSeleccionada,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        !uiState.photoUri.isNullOrBlank() &&
+                                !ProductImageReference.isResourceReference(uiState.photoUri) &&
+                                !imageLoadFailed -> {
                             AsyncImage(
                                 model = File(uiState.photoUri),
                                 contentDescription = "Foto seleccionada del producto",
@@ -346,14 +355,6 @@ private fun AddProductContent(
                                     imageLoadFailed =
                                         state is AsyncImagePainter.State.Error
                                 }
-                            )
-                        }
-                        imagenRecurso != null -> {
-                            Image(
-                                painter = painterResource(imagenRecurso),
-                                contentDescription = uiState.imagenSeleccionada,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
                             )
                         }
                         else -> {
@@ -463,7 +464,9 @@ private fun AddProductContent(
                                             modifier = Modifier.fillMaxSize(),
                                             contentAlignment = Alignment.BottomCenter
                                         ) {
-                                            val imagen = imagenesPredeterminadas[categoria]
+                                            val imagen = ProductImageReference
+                                                .forCategory(categoria)
+                                                ?.drawableRes
                                             if (imagen != null) {
                                                 Image(
                                                     painter = painterResource(imagen),
