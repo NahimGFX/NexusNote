@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import com.example.nexusnote.R
 
 @Composable
@@ -33,18 +37,22 @@ fun HomeScreen(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 20.dp, vertical = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Text(
-            text = stringResource(R.string.home_welcome),
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Text(
-            text = stringResource(R.string.home_description),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("NEXUSNOTE", style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.home_welcome), style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.home_description), style = MaterialTheme.typography.bodyLarge)
+            }
+        }
 
         when {
             uiState.isLoading -> {
@@ -65,11 +73,11 @@ fun HomeScreen(
             else -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    border = androidx.compose.foundation.BorderStroke(
+                    border = BorderStroke(
                         1.dp,
                         MaterialTheme.colorScheme.outlineVariant
                     )
@@ -78,31 +86,13 @@ fun HomeScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = stringResource(R.string.home_summary),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-
-                        Text(
-                            text = stringResource(
-                                R.string.home_total_lists,
-                                uiState.totalLists
-                            )
-                        )
-
-                        Text(
-                            text = stringResource(
-                                R.string.home_total_items,
-                                uiState.totalItems
-                            )
-                        )
-
-                        Text(
-                            text = stringResource(
-                                R.string.home_purchased_items,
-                                uiState.purchasedItems
-                            )
-                        )
+                        Text(stringResource(R.string.home_summary), style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            MetricCard("${uiState.totalLists}", "Listas", Modifier.weight(1f))
+                            MetricCard("${uiState.totalItems}", "Artículos", Modifier.weight(1f))
+                            MetricCard("${uiState.purchasedItems}", "Comprados", Modifier.weight(1f))
+                        }
                     }
                 }
 
@@ -116,16 +106,30 @@ fun HomeScreen(
 
         Button(
             onClick = onViewListsClick,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp)
         ) {
             Text(stringResource(R.string.home_view_lists))
         }
 
         OutlinedButton(
             onClick = onCreateListClick,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp)
         ) {
             Text(stringResource(R.string.home_create_list))
+        }
+    }
+}
+
+@Composable
+private fun MetricCard(value: String, label: String, modifier: Modifier = Modifier) {
+    Card(modifier = modifier, shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(value, style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

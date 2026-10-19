@@ -51,6 +51,7 @@ fun ListsScreen(
     onDeleteList: (Int) -> Unit,
     onCreateClick: () -> Unit,
     onRetryClick: () -> Unit,
+    onBackClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentLists = (uiState as? ListsUiState.Success)?.lists.orEmpty()
@@ -65,7 +66,7 @@ fun ListsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            ListsHeader(lists = currentLists)
+            ListsHeader(lists = currentLists, onBackClick = onBackClick)
 
             when (val state = uiState) {
                 ListsUiState.Loading -> LoadingContent(Modifier.weight(1f))
@@ -139,68 +140,12 @@ fun ListsScreen(
 }
 
 @Composable
-private fun ListsHeader(lists: List<ShoppingListUi>) {
-    val productCount = lists.sumOf { it.productCount.coerceAtLeast(0) }
-    val purchasedCount = lists.sumOf {
-        it.purchasedCount.coerceIn(0, it.productCount.coerceAtLeast(0))
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "BIENVENIDA",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Mis Listas",
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.weight(1f))
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) { Text("👋") }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatPill("Listas", lists.size.toString(), Modifier.weight(1f))
-            StatPill("Productos", productCount.toString(), Modifier.weight(1f))
-            StatPill("Comprados", purchasedCount.toString(), Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun StatPill(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(
-            label,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            value,
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+private fun ListsHeader(lists: List<ShoppingListUi>, onBackClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+        TextButton(onClick = onBackClick) { Text("‹ Inicio") }
+        Text("Mis listas", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text("${lists.size} listas · Organiza, abre o elimina tus compras",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -265,7 +210,7 @@ private fun ShoppingListCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        "$purchasedCount de $productCount comprados",
+                        "$purchasedCount de $productCount productos completos",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelSmall
                     )

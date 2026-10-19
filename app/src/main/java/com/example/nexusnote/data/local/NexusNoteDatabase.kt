@@ -15,7 +15,7 @@ import com.example.nexusnote.data.local.entity.ShoppingListItemEntity
         ProductEntity::class,
         ShoppingListItemEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class NexusNoteDatabase : RoomDatabase() {
